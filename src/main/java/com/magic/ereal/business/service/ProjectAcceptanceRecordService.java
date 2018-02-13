@@ -135,10 +135,10 @@ public class ProjectAcceptanceRecordService {
 
                         }
                         //是否可以内部结项  0：不能  1：可以
-                        ac.setIsCanNBJX(0);
-                        if (isCanNBJXchedule >= 300) {
-                            ac.setIsCanNBJX(1);
-                        }
+                        ac.setIsCanNBJX(1);
+//                        if (isCanNBJXchedule >= 300) {
+//                            ac.setIsCanNBJX(1);
+//                        }
                         break;
                     }
 
@@ -148,7 +148,11 @@ public class ProjectAcceptanceRecordService {
             list.add(ac);
         }
         else{
-            list.add(new Acceptance());
+            Acceptance ac = new Acceptance();
+            ac.setAcceptanceName("周验收");
+            ac.setType(3);
+            ac.setStatus(2);
+            list.add(ac);
         }
         return list;
     }
