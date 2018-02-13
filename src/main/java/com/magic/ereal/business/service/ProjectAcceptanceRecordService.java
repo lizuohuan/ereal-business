@@ -476,7 +476,11 @@ public class ProjectAcceptanceRecordService {
                         //如果上次打分数据不存在，则用最后一周的K值计算
                         // 查询上一周的K值 对比 设置是K值  增减
                         ProjectWeekAcceptance weekAcceptance = projectWeekAcceptanceMapper.queryProjectPreWeek(project.getId());
-                        badSumK = projectAcceptanceRecord.getSumK() - weekAcceptance.getTotalK();
+                        double d = 0.0;
+                        if(null != weekAcceptance && null != weekAcceptance.getTotalK()){
+                            d = weekAcceptance.getTotalK();
+                        }
+                        badSumK = projectAcceptanceRecord.getSumK() - d;
                         //是否上升 isAdd  0:否  1：是
                         if (badSumK < 0) {
                             projectAcceptanceRecord.setIsAdd(0);
