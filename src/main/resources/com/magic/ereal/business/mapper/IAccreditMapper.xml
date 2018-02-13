@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IAccreditMapper">
+
+
+
+    <select id="countAccreditByToUser" resultType="java.lang.Integer">
+        SELECT
+            COUNT(*)
+        FROM
+            accredit a
+        WHERE
+            1 = 1
+        <if test="originalToUserIds != null">
+            AND a.toUserId NOT IN (
+            <foreach collection="originalToUserIds" index="index" item="originalToUserId" separator=",">
+                #{originalToUserId}
+            </foreach>
+            )
+        </if>
+
+        <if test="toUserIds != null">
+            AND a.toUserId IN (
+            <foreach collection="toUserIds" index="index" item="toUserId" separator=",">
+                #{toUserId}
+            </foreach>
+            )
+        </if>
+        AND a.`type` = #{type}
+
+    </select>
+
+    <insert id="batchAddAccredit">
+        INSERT INTO `accredit` (`toUserId`,`fromUserId`,`type`)
+        VALUES
+        <foreach collection="accredits" index="index" item="accredit" separator=",">
+            (#{accredit.toUserId},#{accredit.fromUserId},#{accredit.type})
+        </foreach>
+    </insert>
+
+
+    <delete id="delAccredit">
+        DELETE FROM `accredit` WHERE `fromUserId`=#{fromUserId}
+        <if test="type != null">
+            AND `type`=#{type}
+        </if>
+    </delete>
+
+    <select id="queryAccredit" resultType="com.magic.ereal.business.entity.Accredit">
+        SELECT
+            a.*, u.`name` AS userName,
+            u.avatar AS avatar,
+            d.departmentName AS departmentName,
+            r.role_name AS roleName
+        FROM
+            accredit a,
+            users u,
+            department d,
+            role r
+        WHERE
+            a.toUserId = u.id
+        AND u.department_id=d.id
+        AND u.role_id = r.id
+        AND a.`fromUserId`=#{fromUserId}
+        <if test="type != null">
+            AND a.`type`=#{type}
+        </if>
+    </select>
+
+
+    <select id="queryAccreditByToUser" resultType="com.magic.ereal.business.entity.User">
+        SELECT
+        u.role_id AS roleId, u.id AS id,u.department_id departmentId,u.`name` AS `name`,u.avatar,
+        IF (
+        r.`level` IS NULL,
+        0,
+        r.`level`
+        ) AS isManager,
+        d.departmentName AS departmentName,
+        r.`role_name` AS roleName,
+        c.id AS companyId,
+        c.companyName AS companyName
+        FROM
+        accredit a,
+        users u,
+        role r,
+        department d,
+        company c
+        WHERE
+        a.fromUserId = u.id
+        AND u.role_id = r.id
+        AND u.department_id = d.id
+        AND c.id = d.companyId
+        <if test="type != null">
+            AND a.`type` = #{type}
+        </if>
+        <if test="toUserId != null">
+            AND a.`toUserId` = #{toUserId}
+        </if>
+        GROUP BY
+        a.id
+    </select>
+
+
+
+
+</mapper>

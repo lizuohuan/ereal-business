@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IProjectAcceptanceRecordMapper">
+
+	<resultMap id="BaseResultMap" type="com.magic.ereal.business.entity.ProjectAcceptanceRecord">
+		<result column="id" property="id" javaType="java.lang.Integer"/>
+		<result column="projectId" property="projectId" javaType="java.lang.Integer"/>
+		<result column="createUserId" property="createUserId" javaType="java.lang.Integer"/>
+		<result column="createTime" property="createTime" javaType="java.util.Date"/>
+		<result column="score" property="score" javaType="java.lang.Double"/>
+		<result column="sumK" property="sumK" javaType="java.lang.Double"/>
+		<result column="isAdd" property="isAdd" javaType="java.lang.Integer"/>
+		<result column="badSumK" property="badSumK" javaType="java.lang.Double"/>
+		<result column="status" property="status" javaType="java.lang.Integer"/>
+		<result column="type" property="type" javaType="java.lang.Integer"/>
+		<result column="performanceUserId" property="performanceUserId" javaType="java.lang.Integer"/>
+		<result column="remarks" property="remarks" javaType="java.lang.String"/>
+	</resultMap>
+
+	<resultMap id="BaseResultK" type="com.magic.ereal.business.entity.ProjectAcceptanceRecord" extends="BaseResultMap">
+		<association property="projectKs" column="id" select="com.magic.ereal.business.mapper.IProjectKMapper.queryProjectKByProjectRecordId2"></association>
+	</resultMap>
+
+
+	<select id="list"  resultMap="BaseResultK" >
+		SELECT * FROM project_acceptancerecord pa
+		WHERE pa.projectId = #{projectId} AND pa.type = #{type}
+		ORDER BY pa.id DESC
+	</select>
+
+	<select id="queryRecordByProject"  resultMap="BaseResultK" >
+		SELECT * FROM project_acceptancerecord pa
+		WHERE pa.projectId = #{projectId} AND pa.type = #{type}
+		ORDER BY pa.id DESC
+	</select>
+
+	<select id="queryRecordByProject2"  resultMap="BaseResultK" >
+		SELECT * FROM project_acceptancerecord pa
+		WHERE pa.projectId = #{projectId} AND pa.type IN (1,2)
+		ORDER BY pa.id DESC
+	</select>
+
+	<insert id="save" keyProperty="id" useGeneratedKeys="true" parameterType="com.magic.ereal.business.entity.ProjectAcceptanceRecord">
+		insert into project_acceptancerecord (projectId, `type`, status, score, createTime,`remarks`,`createUserId`,`sumK`,`isAdd`,`badSumK`,`performanceUserId`)
+		values (#{projectId},#{type},#{status},#{score},now(),#{remarks},#{createUserId},#{sumK},#{isAdd},#{badSumK},#{performanceUserId})
+	</insert>
+
+	<insert id="saveList" parameterType="list">
+		insert into project_acceptancerecord (projectId, `type`, status, score, createTime,`remarks`,`createUserId`,`sumK`,`isAdd`,`badSumK`)
+		values
+		<foreach collection="list" item="p" separator=",">
+			(#{p.projectId},#{p.type},#{p.status},#{p.score},now(),#{p.remarks},#{p.createUserId},#{p.sumK},#{p.isAdd},#{p.badSumK})
+		</foreach>
+	</insert>
+
+	<select id="getKList" resultMap="BaseResultMap" >
+		select * from project_acceptancerecord p
+		WHERE p.projectId = #{projectId}
+		AND p.type = #{type}
+		AND p.status = #{status}
+		ORDER BY p.id DESC limit 0,1
+	</select>
+
+
+	<select id="getKListTwo" resultMap="BaseResultMap" >
+		SELECT
+			*
+		FROM
+			project_acceptancerecord p
+		WHERE
+			p.projectId = #{projectId}
+		AND ((
+			p.type = 1
+			AND p.`status` = 13
+			OR p.`status` = 12
+		)
+		OR (p.type = 2 AND (p.`status` = 2 OR p.`status` = 1)))
+		ORDER BY
+			p.id DESC
+		LIMIT 0,1
+	</select>
+
+
+	<select id="getInnerAllKList" resultMap="BaseResultMap" >
+		SELECT * FROM project_acceptancerecord pa
+		WHERE
+		pa.type = 1
+		AND pa.`status` = #{status}
+		AND pa.projectId IN (
+		<foreach collection="projectIds" item="pId" separator=",">
+			#{pId}
+		</foreach>
+		)
+		ORDER BY pa.id DESC LIMIT 0,1
+	</select>
+
+
+	<select id="info" resultMap="BaseResultMap">
+		select * from project_acceptancerecord pa WHERE pa.id = #{id};
+	</select>
+</mapper>

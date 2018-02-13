@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IProjectInteriorWeekAcceptanceMapper" >
+
+
+    <resultMap id="BaseProjectInteriorWeekAcceptance" type="com.magic.ereal.business.entity.ProjectInteriorWeekAcceptance">
+        <result column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="projectInteriorId" property="projectInteriorId" javaType="java.lang.Integer"/>
+        <result column="progress" property="progress" javaType="java.lang.Double"/>
+        <result column="p" property="p" javaType="java.lang.Double"/>
+        <result column="a" property="a" javaType="java.lang.Double"/>
+        <result column="n" property="n" javaType="java.lang.Double"/>
+        <result column="e" property="e" javaType="java.lang.Double"/>
+        <result column="l" property="l" javaType="java.lang.Double"/>
+        <result column="status" property="status" javaType="java.lang.Integer"/>
+        <result column="sumK" property="sumK" javaType="java.lang.Double"/>
+        <result column="remarks" property="remarks" javaType="java.lang.String"/>
+        <result column="createTime" property="createTime" javaType="java.util.Date"/>
+        <result column="updateTime" property="updateTime" javaType="java.util.Date"/>
+    </resultMap>
+
+    <!-- 包括周验收数据 -->
+    <resultMap id="IncludeWeekKAllocation" type="com.magic.ereal.business.entity.ProjectInteriorWeekAcceptance" extends="BaseProjectInteriorWeekAcceptance">
+        <association property="weekAllocations" column="id" select="com.magic.ereal.business.mapper.IProjectInteriorWeekKAllocationMapper.queryAllocationByWeek"/>
+    </resultMap>
+
+    <resultMap id="IncludeUserH" type="com.magic.ereal.business.entity.ProjectInteriorWeekAcceptance" extends="BaseProjectInteriorWeekAcceptance">
+        <association property="userHs" column="projectInteriorId" select="com.magic.ereal.business.mapper.IUserMapper.queryUserH"/>
+    </resultMap>
+
+    <resultMap id="BaseExcelProjectInteriorNewReport" type="com.magic.ereal.business.entity.ExcelProjectInteriorNewReport">
+        <result column="progress" property="progress" javaType="java.lang.Double"/>
+        <result column="p" property="p" javaType="java.lang.Double"/>
+        <result column="a" property="a" javaType="java.lang.Double"/>
+        <result column="n" property="n" javaType="java.lang.Double"/>
+        <result column="e" property="e" javaType="java.lang.Double"/>
+        <result column="l" property="l" javaType="java.lang.Double"/>
+        <result column="type" property="type" javaType="java.lang.String"/>
+        <result column="quality" property="quality" javaType="java.lang.Double"/>
+        <association property="excelUserKs" column="id" select="com.magic.ereal.business.mapper.IProjectInteriorWeekKAllocationMapper.queryExcelUserKByProject"/>
+    </resultMap>
+
+    <select id="queryExcelProjectInteriorNewReport" resultMap="BaseExcelProjectInteriorNewReport">
+        SELECT
+            pweek.*,
+            IF(p.atHome = 0 ,'内','外') AS `type`,
+            IF(pweek.progress >= 50 ,
+                IF(p.atHome = 0 , pweek.p * 0.25 + pweek.a * 0.25 + pweek.e * 0.25  + pweek.l * 0.25 ,
+                    pweek.p * 0.2 + pweek.a * 0.2 + pweek.e * 0.2  + pweek.l * 0.2 + pweek.n * 0.2)
+         , pweek.p * 0.5 + pweek.a * 0.5) AS quality
+        FROM
+            project_interior_week_acceptance pweek,
+            project_interior p
+        WHERE
+            p.id = pweek.projectInteriorId
+            AND p.id = #{projectId}
+            ORDER BY
+                pweek.id DESC
+            LIMIT 0,1
+    </select>
+
+
+    <select id="queryAcceptanceIncludeUserH" resultMap="IncludeUserH">
+        SELECT * FROM `project_interior_week_acceptance` WHERE `id`=#{weekId}
+    </select>
+
+    <select id="queryAcceptanceApplicationData" resultMap="BaseProjectInteriorWeekAcceptance">
+
+    </select>
+
+    <select id="queryUserKByProjectInterior" resultType="com.magic.ereal.business.entity.UserK">
+        SELECT
+                u.`name` AS `name`,
+                (
+                        SELECT
+<!--                                 SUM(pk.ratio * pk.k) -->
+                                SUM(pk.k)
+                        FROM
+                                project_interior_week_acceptance pweek,
+                                project_interior_week_k_allocation pk
+                        WHERE
+                                pweek.projectInteriorId = p.id
+                        AND pk.weekId = pweek.id
+                        AND pk.userId = u.id
+                ) AS userK
+        FROM
+                users u,
+                project_interior p,
+                project_group pg
+        WHERE
+                p.projectGroupId = pg.id
+        AND u.id IN (SELECT userId FROM project_group_user WHERE projectGroupId=p.projectGroupId)
+        AND p.id=#{projectInteriorId}
+        GROUP BY
+                u.id
+    </select>
+
+    <select id="queryBaseAcceptanceById" resultType="com.magic.ereal.business.entity.ProjectInteriorWeekAcceptance">
+      SELECT * FROM `project_interior_week_acceptance` WHERE `id`=#{id}
+    </select>
+
+
+    <select id="queryAcceptanceById" resultMap="IncludeWeekKAllocation">
+      SELECT * FROM `project_interior_week_acceptance` WHERE `id`=#{id}
+    </select>
+
+    <select id="queryPreAcceptance" resultType="com.magic.ereal.business.entity.ProjectInteriorWeekAcceptance">
+        SELECT * FROM
+          `project_interior_week_acceptance`
+        WHERE
+          `projectInteriorId`=#{projectId}
+          GROUP BY `id` DESC
+          LIMIT 1,1
+    </select>
+
+    <select id="queryProjectInteriorWeekAcceptanceByProject" resultMap="IncludeWeekKAllocation">
+        SELECT
+          *
+        FROM
+          `project_interior_week_acceptance`
+        WHERE
+          `projectInteriorId`=#{projectId}
+        ORDER BY id ASC
+    </select>
+
+    <select id="queryProjectInteriorWeekAcceptanceByProjectDESC" resultMap="IncludeWeekKAllocation">
+        SELECT
+          *
+        FROM
+          `project_interior_week_acceptance`
+        WHERE
+          `projectInteriorId`=#{projectId}
+        ORDER BY id DESC
+    </select>
+
+    <insert id="addProjectInteriorWeekAcceptance" useGeneratedKeys="true" keyProperty="acceptance.id">
+        INSERT INTO `project_interior_week_acceptance`
+        (`projectInteriorId`,`status`,`createTime`,`updateTime`)
+        VALUES
+        (#{acceptance.projectInteriorId},0,now(),now())
+    </insert>
+
+
+    <update id="updateProjectInteriorWeekAcceptance">
+        UPDATE `project_interior_week_acceptance`
+        <set>
+            <if test="acceptance.totalK != null">
+                `totalK`=#{acceptance.totalK},
+            </if>
+            <if test="acceptance.isAdd != null">
+                `isAdd`=#{acceptance.isAdd},
+            </if>
+            <if test="acceptance.updateTime != null">
+                `updateTime`=#{acceptance.updateTime},
+            </if>
+            <if test="acceptance.remarks != null">
+                `remarks`=#{acceptance.remarks},
+            </if>
+            <if test="acceptance.sumK != null">
+                `sumK`=#{acceptance.sumK},
+            </if>
+            <if test="acceptance.status != null">
+                `status`=#{acceptance.status},
+            </if>
+            <if test="acceptance.l != null">
+                `l`=#{acceptance.l},
+            </if>
+            <if test="acceptance.e != null">
+                `e`=#{acceptance.e},
+            </if>
+            <if test="acceptance.n != null">
+                `n`=#{acceptance.n},
+            </if>
+            <if test="acceptance.a != null">
+                `a`=#{acceptance.a},
+            </if>
+            <if test="acceptance.p != null">
+                `p`=#{acceptance.p},
+            </if>
+            <if test="acceptance.progress != null">
+                `progress`=#{acceptance.progress},
+            </if>
+        </set>
+        WHERE `id`=#{acceptance.id}
+    </update>
+
+</mapper>

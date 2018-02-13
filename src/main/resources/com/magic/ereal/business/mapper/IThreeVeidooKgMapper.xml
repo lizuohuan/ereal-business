@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IThreeVeidooKgMapper">
+
+
+    <select id="queryByItems" resultType="com.magic.ereal.business.entity.ThreeVeidooKg">
+        SELECT *  FROM three_veidoo_kg kg WHERE kg.userId = #{userId} AND kg.startTime = #{startTime}
+        AND kg.endTime = #{endTime} AND kg.`type` = #{type}
+    </select>
+
+
+    <select id="batchQueryByItems" resultType="java.lang.Integer">
+
+        SELECT COUNT(0) FROM three_veidoo_kg kg WHERE
+        <foreach collection="threeVeidooKgs" index="index" item="threeVeidooKg" separator="OR" close=")" open="(">
+            kg.userId = #{threeVeidooKg.userId} AND kg.startTime = #{threeVeidooKg.startTime}
+            AND kg.endTime = #{threeVeidooKg.endTime} AND kg.`type` = #{threeVeidooKg.type}
+        </foreach>
+
+    </select>
+
+    <update id="updateThreeVeidooKg">
+        UPDATE `three_veidoo_kg`
+        <set>
+            <if test="threeVeidooKg.userId != null">
+                `userId`=#{threeVeidooKg.userId},
+            </if>
+            <if test="threeVeidooKg.type != null">
+                `type`=#{threeVeidooKg.type},
+            </if>
+            <if test="threeVeidooKg.score != null">
+                `score`=#{threeVeidooKg.score},
+            </if>
+            <if test="threeVeidooKg.startTime != null">
+                `startTime`=#{threeVeidooKg.startTime},
+            </if>
+            <if test="threeVeidooKg.endTime != null">
+                `endTime`=#{threeVeidooKg.endTime},
+            </if>
+        </set>
+        WHERE `id`=#{threeVeidooKg.id}
+    </update>
+
+
+    <insert id="addThreeVeidooKg">
+        INSERT INTO `three_veidoo_kg` (`score`,`userId`,`startTime`,`endTime`,`createTime`,`type`,`dateType`)
+        VALUES
+        (#{threeVeidooKg.score},#{threeVeidooKg.userId},#{threeVeidooKg.startTime},#{threeVeidooKg.endTime},
+        NOW(),#{threeVeidooKg.type},#{threeVeidooKg.dateType})
+    </insert>
+
+
+    <insert id="batchAddThreeVeidooKg">
+        INSERT INTO `three_veidoo_kg` (`score`,`userId`,`startTime`,`endTime`,`createTime`,`type`,`dateType`)
+        VALUES
+        <foreach collection="threeVeidooKgs" index="index" item="threeVeidooKg" separator=",">
+            (#{threeVeidooKg.score},#{threeVeidooKg.userId},#{threeVeidooKg.startTime},#{threeVeidooKg.endTime},
+            NOW(),#{threeVeidooKg.type},#{threeVeidooKg.dateType})
+        </foreach>
+    </insert>
+
+
+    <select id="queryThreeVeidooKgByItem" resultType="com.magic.ereal.business.entity.ThreeVeidooKg">
+        SELECT kg.*,u.`name` AS userName ,d.departmentName AS departmentName,cc.companyName FROM
+        `three_veidoo_kg` kg,users u,department d,company cc
+        WHERE kg.userId = u.id AND u.department_id = d.id
+        AND cc.id = d.companyId
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+        <if test="type != null">
+            AND kg.`type`=#{type}
+        </if>
+        <if test="companyId != null">
+            AND cc.id =#{companyId}
+        </if>
+        <if test="startTime != null and endTime != null">
+            AND kg.`startTime`=#{startTime} AND kg.`endTime`=#{endTime}
+        </if>
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+    </select>
+
+
+    <select id="countThreeVeidooKgByItem" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM
+        `three_veidoo_kg` kg,users u,department d
+        WHERE kg.userId = u.id AND u.department_id = d.id
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+        <if test="companyId != null">
+            AND d.companyId =#{companyId}
+        </if>
+        <if test="type != null">
+            AND kg.`type`=#{type}
+        </if>
+        <if test="startTime != null and endTime != null">
+            AND kg.`startTime`=#{startTime} AND kg.`endTime`=#{endTime}
+        </if>
+    </select>
+
+
+
+
+</mapper>

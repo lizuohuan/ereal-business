@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.ICompanyBannerMapper">
+
+
+
+    <select id="queryBannerByIdForAPP" resultType="com.magic.ereal.business.entity.Banner">
+        SELECT * FROM company_banner WHERE id = #{id}
+    </select>
+
+    <delete id="delCompanyBanner">
+        DELETE FROM company_banner WHERE  id = #{id}
+    </delete>
+
+    <select id="queryBannerForAPP" resultType="com.magic.ereal.business.entity.Banner">
+        SELECT
+          cb.*
+        FROM company_banner cb
+        WHERE cb.companyId = #{companyId}
+        AND cb.type = #{type}
+    </select>
+
+    <select id="queryBannerById" resultType="com.magic.ereal.business.entity.CompanyBanner">
+        SELECT
+          cb.*,u.`name` AS createUserName,cc.companyName AS companyName
+        FROM company_banner cb,users u,company cc
+        WHERE cb.createUserId = u.id
+        AND cc.id = cb.companyId
+        AND cb.id = #{id}
+    </select>
+
+    <select id="queryCompanyBannerByItems" resultType="com.magic.ereal.business.entity.CompanyBanner">
+        SELECT
+          cb.*,u.`name` AS createUserName,cc.companyName AS companyName
+        FROM company_banner cb,users u,company cc
+        WHERE cb.createUserId = u.id
+        AND cc.id = cb.companyId
+        <if test="type != null">
+            AND cb.`type` = #{type}
+        </if>
+        <if test="companyId != null">
+            AND cb.`companyId` = #{companyId}
+        </if>
+        ORDER BY cb.id DESC
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+    </select>
+
+    <select id="countCompanyBannerByItems" resultType="java.lang.Integer">
+        SELECT
+          COUNT(0)
+        FROM company_banner cb,users u,company cc
+        WHERE cb.createUserId = u.id
+        AND cc.id = cb.companyId
+        <if test="type != null">
+            AND cb.`type` = #{type}
+        </if>
+        <if test="companyId != null">
+            AND cb.`companyId` = #{companyId}
+        </if>
+    </select>
+
+    <insert id="addCompanyBanner" parameterType="com.magic.ereal.business.entity.CompanyBanner">
+        INSERT INTO company_banner (title, context, imgUrl, companyId, `type`, createTime, createUserId)
+        VALUES (#{title}, #{context}, #{imgUrl}, #{companyId}, #{type}, NOW(), #{createUserId})
+    </insert>
+
+
+    <update id="updateCompanyBanner">
+        UPDATE company_banner
+        <set>
+            <if test="companyBanner.type != null">
+                `type` = #{companyBanner.type},
+            </if>
+            <if test="companyBanner.companyId != null">
+                companyId = #{companyBanner.companyId},
+            </if>
+            <if test="companyBanner.imgUrl != null">
+                imgUrl = #{companyBanner.imgUrl},
+            </if>
+            <if test="companyBanner.context != null">
+                context = #{companyBanner.context},
+            </if>
+            <if test="companyBanner.title != null">
+                title = #{companyBanner.title},
+            </if>
+        </set>
+        WHERE id = #{companyBanner.id}
+    </update>
+
+
+</mapper>

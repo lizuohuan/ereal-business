@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IOfferAwardMapper" >
+
+
+
+    <select id="queryAwardsByUser" resultType="com.magic.ereal.business.entity.Awards">
+        SELECT
+            ca.awardsName AS awardsName,a.`month` AS `time`
+        FROM
+            custom_awards ca,
+            offer_award a
+        WHERE
+            ca.id = a.customAwardsId
+        AND CASE ca.type
+        WHEN 0 THEN a.targetId = #{userId}
+        WHEN 1 THEN a.targetId = (SELECT u.department_id FROM users u WHERE u.id = #{userId}) END
+    </select>
+
+    <select id="countOfferAwardByItems" resultType="java.lang.Integer" parameterType="map">
+        SELECT COUNT(0)
+        FROM
+        custom_awards ca,offer_award a
+        WHERE ca.id = a.customAwardsId
+        <if test="type != null">
+            AND ca.`type` = #{type}
+        </if>
+        <if test="month != null">
+            AND DATE_FORMAT(a.`month`,'%Y-%m') = DATE_FORMAT(#{month},'%Y-%m')
+        </if>
+    </select>
+
+
+
+    <select id="queryOfferAwardByItems" resultType="com.magic.ereal.business.entity.OfferAward" parameterType="map">
+        SELECT a.*,ca.awardsName AS customAwardsName,ca.`type`,
+        CASE ca.type
+        WHEN 0 THEN (SELECT u.`name` FROM users u WHERE u.id = a.targetId )
+        WHEN 1 THEN (SELECT d.departmentName FROM department d WHERE d.id = a.targetId) END AS targetName
+        FROM
+        custom_awards ca,offer_award a
+        WHERE ca.id = a.customAwardsId
+        <if test="type != null">
+            AND ca.`type` = #{type}
+        </if>
+        <if test="month != null">
+            AND DATE_FORMAT(a.`month`,'%Y-%m') = DATE_FORMAT(#{month},'%Y-%m')
+        </if>
+        ORDER BY a.id DESC
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+    </select>
+
+
+
+    <delete id="delOfferAward">
+        DELETE FROM offer_award WHERE id = #{id}
+    </delete>
+
+    <insert id="addOfferAward" parameterType="com.magic.ereal.business.entity.OfferAward">
+        INSERT INTO offer_award ( customAwardsId, `month`, targetId, createTime)
+        VALUES ( #{customAwardsId}, #{month}, #{targetId}, NOW())
+    </insert>
+
+
+</mapper>

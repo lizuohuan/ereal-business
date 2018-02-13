@@ -1,0 +1,1129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IUserMapper">
+
+    <resultMap id="BaseResultMap" type="com.magic.ereal.business.entity.User">
+        <id column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="account" property="account" javaType="java.lang.String"/>
+        <result column="password" property="password" javaType="java.lang.String"/>
+        <result column="name" property="name" javaType="java.lang.String"/>
+        <result column="role_id" property="roleId" javaType="java.lang.Integer"/>
+        <result column="isManager" property="isManager" javaType="java.lang.Integer"/>
+        <result column="avatar" property="avatar" javaType="java.lang.String"/>
+        <result column="age" property="age" javaType="java.lang.Integer"/>
+        <result column="sex" property="sex" javaType="java.lang.Integer"/>
+        <result column="hobby" property="hobby" javaType="java.lang.String"/>
+        <result column="Incumbency" property="incumbency" javaType="java.lang.Integer"/>
+        <result column="positive_time" property="positiveTime" javaType="java.util.Date"/>
+        <result column="salary" property="salary" javaType="java.lang.Double"/>
+        <result column="practiceSalary" property="practiceSalary" javaType="java.lang.Double"/>
+        <result column="create_time" property="createTime" javaType="java.util.Date"/>
+        <result column="dimissionTime" property="dimissionTime" javaType="java.util.Date"/>
+        <result column="update_time" property="updateTime" javaType="java.util.Date"/>
+        <result column="birthday" property="birthday" javaType="java.util.Date"/>
+        <result column="resignTime" property="resignTime" javaType="java.util.Date"/>
+        <result column="entry_time" property="entryTime" javaType="java.util.Date"/>
+        <result column="lastLoginTime" property="lastLoginTime" javaType="java.util.Date"/>
+        <result column="email" property="email" javaType="java.lang.String"/>
+        <result column="phone" property="phone" javaType="java.lang.String"/>
+        <result column="department_id" property="departmentId" javaType="java.lang.Integer"/>
+        <result column="token" property="token" javaType="java.lang.String"/>
+        <result column="deviceType" property="deviceType" javaType="java.lang.Integer"/>
+        <result column="isFirst" property="isFirst" javaType="java.lang.Integer"/>
+        <result column="deviceToken" property="deviceToken" javaType="java.lang.String"/>
+        <result column="departmentName" property="departmentName" javaType="java.lang.String"/>
+        <result column="companyName" property="companyName" javaType="java.lang.String"/>
+        <result column="roleName" property="roleName" javaType="java.lang.String"/>
+        <result column="companyId" property="companyId" javaType="java.lang.Integer"/>
+        <result column="isCTeacher" property="isCTeacher" javaType="java.lang.Integer"/>
+        <result column="isProjectDepartment" property="isProjectDepartment" javaType="java.lang.Integer"/>
+    </resultMap>
+
+
+    <resultMap id="IncludeRoles" type="com.magic.ereal.business.entity.User" extends="BaseResultMap">
+        <association property="roles" column="id" select="com.magic.ereal.business.mapper.IRoleMapper.queryAdminRole"/>
+    </resultMap>
+
+
+
+
+    <resultMap id="UserExcelOfWorkDiary" type="com.magic.ereal.business.entity.UserExcelOfWorkDiary">
+        <result column="userName" property="userName" javaType="java.lang.String"/>
+        <result column="userId" property="userId" javaType="java.lang.Integer"/>
+        <association property="subs" column="userId=userId,month=month"
+                     select="com.magic.ereal.business.mapper.IWorkDiarySubMapper.countExcelOfWorkDiarySub"/>
+        <association property="attendanceDays" column="userId=userId,month=month"
+                     select="com.magic.ereal.business.mapper.IMonthDaysUserMapper.countDaysOfUser"/>
+
+    </resultMap>
+
+
+	<select id="queryUserByDepartment2" resultMap="BaseResultMap">
+		SELECT id,`name`,account FROM users WHERE Incumbency NOT IN (3) AND role_id NOT IN (1)
+		AND department_id = #{departmentId}
+	</select>
+
+	<select id="queryExportProjectControl" resultType="com.magic.ereal.business.entity.ExportProjectControl">
+		SELECT
+			pgu.*, u.`name` AS userName,
+			CASE u.id WHEN pg.projectManagerId THEN 1
+					 WHEN p.aTeacher THEN 0
+					 ELSE 2 END AS role,
+			(IFNULL((SELECT SUM(pk.sumK) FROM project_k pk,project_acceptancerecord pa WHERE pk.projectRecordId = pa.id AND pa.projectId = p.id AND pk.userId = u.id),0)
+			+ IFNULL((SELECT SUM(pk.ratio * sectionSumK / 100) FROM  project_week_k_allocation pk, project_week_acceptance pweek
+					WHERE  pk.projectWeekAcceptanceId = pweek.id AND pweek.projectId = p.id AND pk.userId=u.id),0))AS curreTotalK,
+			(SELECT SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600 ) FROM work_diary wd ,work_diary_sub wds
+				WHERE wd.id = wds.workDiaryId AND wds.jobTypeId=p.id AND wds.transactionSubId=4
+				AND wd.userId=u.id AND wd.`status` = 4004) AS curreTotalH
+
+		FROM
+			project p,
+			project_group_user pgu,
+			project_group pg,
+			users u
+		WHERE
+			p.projectGroupId = pg.id
+		AND pg.id = pgu.projectGroupId
+		AND u.id = pgu.userId
+		AND p.id = #{projectId}
+	</select>
+    <select id="isCTeacherOfProject" resultType="java.lang.Integer">
+		SELECT COUNT(0) FROM project p WHERE p.cTeacherId = #{userId}
+			OR p.cTeacherId IN (SELECT fromUserId FROM accredit WHERE toUserId = #{userId} AND `type` = 1)
+	</select>
+
+
+    <select id="isCTeacher" resultType="java.lang.Integer">
+        <if test="isExternal == 1">
+            SELECT COUNT(0) FROM project p WHERE p.cTeacherId = #{userId} OR p.bTeacherId = #{userId}
+            OR p.cTeacherId IN (SELECT fromUserId FROM accredit WHERE toUserId = #{userId} AND `type` = 1)
+            OR p.bTeacherId IN (SELECT fromUserId FROM accredit WHERE toUserId = #{userId} AND `type` = 1)
+        </if>
+        <if test="isExternal == 0">
+            SELECT COUNT(0) FROM project_interior p WHERE p.directReportPersonUserId = #{userId}
+            OR p.directReportPersonUserId IN (SELECT fromUserId FROM accredit WHERE toUserId = #{userId} AND `type` = 1)
+        </if>
+
+    </select>
+
+    <select id="queryUserByItemsOfV2" resultMap="BaseResultMap">
+        SELECT u.*,d.companyId AS companyId
+        FROM users u,department d
+        WHERE u.department_id = d.id
+        <if test="departmentId != null">
+            AND u.department_id = #{departmentId}
+        </if>
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        <if test="roleId != null">
+            AND u.role_id = #{roleId}
+        </if>
+        <if test="roleId == null">
+            AND u.role_id NOT IN (1)
+        </if>
+    </select>
+
+    <select id="queryAllUser" resultMap="BaseResultMap">
+		SELECT
+		u.id,d.departmentName,cc.companyName,u.`name`
+		FROM users u,department d,company cc
+		WHERE
+		u.department_id = d.id
+		AND d.companyId = cc.id
+		AND u.role_id NOT IN (1)
+	</select>
+
+    <select id="countUserWorkDiary" resultMap="UserExcelOfWorkDiary">
+        SELECT u.id AS userId,u.`name` AS userName,
+        #{month} AS `month`
+        FROM users u,department d
+        WHERE u.department_id = d.id
+        AND d.isValid = 1
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+        AND u.role_id NOT IN (1)
+    </select>
+
+
+    <select id="queryUserByIsValid" resultMap="BaseResultMap">
+        SELECT u.* FROM users u,department d WHERE u.department_id = d.id AND d.isValid = 0
+        <if test="user.name != null and user.name != ''">
+            AND u.name LIKE '%${user.name}%'
+        </if>
+        <if test="user.roleId != null">
+            AND u.role_id = #{user.roleId}
+        </if>
+        <if test="user.phone != null and user.phone != ''">
+            AND u.phone LIKE '%${user.phone}%'
+        </if>
+        <if test="user.account != null and user.account != ''">
+            AND u.account LIKE '%${user.account}%'
+        </if>
+        <if test="user.sex != null">
+            ANd u.sex = #{user.sex}
+        </if>
+        <if test="user.departmentId != null">
+            ANd u.department_id = #{user.departmentId}
+        </if>
+        <if test="user.companyId != null">
+            ANd d.companyId = #{user.companyId}
+        </if>
+        <if test="user.incumbency != null">
+            ANd u.incumbency = #{user.incumbency}
+        </if>
+        ORDER BY
+        <if test="pageArgs != null">
+            <if test="pageArgs.column != null and pageArgs.column != ''">
+                ${pageArgs.column} ${pageArgs.order},
+            </if>
+        </if>
+        u.`id` DESC
+        <if test="pageArgs != null">
+            limit #{pageArgs.pageStart}, #{pageArgs.pageSize}
+        </if>
+    </select>
+
+
+    <select id="countUserByIsValid" resultType="java.lang.Integer">
+		SELECT COUNT(0) FROM  users u,department d WHERE  u.department_id = d.id AND d.isValid = 0
+	</select>
+
+    <select id="queryUserByDepartmentId" resultMap="BaseResultMap">
+		SELECT id,`name`,avatar,deviceToken,deviceType,token FROM  users WHERE  department_id = #{departmentId}
+		AND role_id NOT IN (1)
+	</select>
+
+
+    <select id="queryPerformanceEmployee" resultMap="BaseResultMap">
+		SELECT
+			id,deviceToken,deviceType,account,`name`
+		FROM
+			users
+		WHERE
+		(
+
+			id IN
+			(
+					SELECT u.id FROM users u,department d,company c WHERE u.department_id = d.id AND d.companyId = c.id AND d.id = 1 AND u.role_id=13
+			)
+		)
+		AND deviceToken IS NOT NULL
+	</select>
+
+    <select id="queryUserDevice" resultMap="BaseResultMap">
+		SELECT
+			id,deviceToken,deviceType,account
+		FROM
+			users
+		WHERE
+		(
+			role_id = 6
+			OR
+			id IN
+			(
+					SELECT u.id FROM users u,department d,company c WHERE u.department_id = d.id AND d.companyId = c.id AND d.id = #{departmentId} AND u.role_id=13
+			)
+		)
+		AND deviceToken IS NOT NULL
+	</select>
+
+    <update id="setDeviceNull">
+		UPDATE `users` SET deviceToken = NULL ,deviceType = NULL WHERE id=#{userId}
+	</update>
+
+    <select id="queryUserDeviceTypeAndToken" resultMap="BaseResultMap">
+        SELECT id,deviceType,deviceToken,account,phone
+        FROM users
+        WHERE id IN
+        <foreach collection="ids" index="index" item="id" close=")" open="(" separator=",">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="queryUserByPhone" resultMap="BaseResultMap">
+		SELECT * FROM `users` WHERE phone=#{phone}
+	</select>
+
+    <select id="queryUserForWeb" resultMap="BaseResultMap">
+
+        SELECT
+        u.id,
+        u.`name`,
+        u.account,
+        u.phone,
+        u.department_id
+        FROM
+        users u,
+        department d
+        WHERE
+        u.role_id NOT IN (1)
+        AND d.id = u.department_id
+        <!--AND (
+            u.role_id = 7
+            OR (
+                d.companyId = #{companyId}
+                AND u.role_id = 12
+            )
+        )
+        AND  u.id NOT IN (
+            (SELECT uu.id FROM  users uu,role rr WHERE  uu.role_id = rr.id
+            AND uu.department_id = #{departmentId} AND rr.`level` = 1)
+        ) -->
+
+    </select>
+
+    <select id="queryPerformanceEmployees" resultMap="BaseResultMap">
+		SELECT
+			u.id,
+			u.`name`,
+			u.account,
+			u.deviceToken,
+			u.deviceType
+		FROM
+			users u,
+			department d,
+			company c
+		WHERE
+			u.department_id = d.id
+		AND d.companyId = c.id
+		AND c.id = #{companyId}
+		AND u.role_id IN (SELECT rm.roleId FROM role_menu rm WHERE rm.menuId = 204)
+	</select>
+
+    <select id="staticsBirthday" resultMap="BaseResultMap" parameterType="map">
+		SELECT
+			u.id,
+			u.`name`,
+			u.account,
+			u.birthday,
+			c.companyName,
+			c.id AS companyId
+		FROM
+			users u,
+			department d,
+			company c
+		WHERE
+			u.department_id = d.id
+		AND d.companyId = c.id
+		AND DATE_FORMAT(u.birthday, '%Y-%m-%d') = DATE_FORMAT(#{time},'%Y-%m-%d')
+		AND c.id=#{companyId}
+		GROUP BY
+			u.id
+	</select>
+
+    <select id="staticsManager" resultMap="BaseResultMap">
+		SELECT u.id,u.deviceToken,u.`deviceType`
+		FROM users u,department d,role r
+		WHERE u.department_id = d.id AND  u.role_id=r.id
+		AND d.id IN
+		(
+		SELECT
+			(SELECT department_id FROM users WHERE id = wd.userId) AS departmentId
+		FROM
+			work_diary wd
+		WHERE
+			DATE_FORMAT(wd.workTime, '%Y-%m-%d') = DATE_FORMAT(
+				'2017-05-31 12:00:12',
+				'%Y-%m-%d'
+			)
+		AND wd.`status` = 4001
+		GROUP BY departmentId
+		)
+		AND r.`level` = 1
+	</select>
+
+    <select id="staticsComprehensiveManager" resultMap="BaseResultMap">
+
+		SELECT u.id,u.deviceToken,u.deviceType
+		FROM users u,department d,company c
+		WHERE u.department_id = d.id AND d.companyId=c.id
+		AND c.id IN
+		(
+		SELECT
+			(SELECT companyId FROM department WHERE id = (SELECT department_id FROM users WHERE id = wd.userId))
+		FROM
+			work_diary wd
+		WHERE
+			DATE_FORMAT(wd.workTime, '%Y-%m-%d') = DATE_FORMAT(#{time},'%Y-%m-%d')
+		AND wd.`status` = 4004
+		GROUP BY
+			wd.userId
+		)
+		AND u.role_id = 10
+	</select>
+
+
+    <select id="staticsNOSubmitWorkdiary" resultMap="BaseResultMap">
+
+		SELECT
+			id,deviceToken,deviceType
+		FROM
+			users
+		WHERE
+			id NOT IN (
+				SELECT
+					userId
+				FROM
+					work_diary
+				WHERE
+					DATE_FORMAT(workTime, '%Y-%m-%d') = DATE_FORMAT(
+						#{time},
+						'%Y-%m-%d'
+					)
+				AND `status` != 4000
+			)
+			AND deviceToken IS NOT NULL AND deviceType IS NOT NULL
+
+	</select>
+    <select id="queryUserByCompany" resultMap="BaseResultMap">
+		SELECT u.`id`,u.`name`,u.`account`,u.`phone`,u.token,u.deviceType,u.deviceToken,
+		d.departmentName AS departmentName,
+		IF(
+			(SELECT uu.role_id FROM  users uu ,role r WHERE uu.department_id = d.id AND r.level = 1 GROUP BY uu.department_id) = 12,
+			1,0
+		) AS isProjectDepartment
+		FROM  users u,department d
+		WHERE
+		u.department_id = d.id
+		AND u.role_id NOT IN (1)
+		AND d.companyId=#{companyId}
+	</select>
+
+    <select id="queryBaseInfo" resultMap="BaseResultMap">
+		SELECT * FROM `users` WHERE  `id`=#{id}
+	</select>
+
+    <select id="queryUserByProject" resultMap="BaseResultMap">
+		SELECT
+			u.id,u.`name`,u.token
+		FROM
+			users u
+		WHERE
+		 u.id in ( SELECT pgu.userId FROM project p, project_group_user pgu WHERE pgu.projectGroupId=p.projectGroupId and p.id=#{projectId})
+	</select>
+
+    <select id="queryUserH" resultType="com.magic.ereal.business.entity.UserH">
+		SELECT
+		u.id AS userId,
+		u.`name` AS userName,
+		<![CDATA[
+		(SELECT SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) FROM
+		work_diary_sub wds,work_diary wd
+		WHERE wd.id=wds.workDiaryId and wds.transactionSubId=3 and wd.userId=u.id and wds.jobTypeId=pin.id and wd.`status`=4004
+		and  UNIX_TIMESTAMP(wds.endTime) <= UNIX_TIMESTAMP()  AND  UNIX_TIMESTAMP(wds.startTime) >=
+		IF(((SELECT COUNT(*) FROM project_interior_week_acceptance pweek WHERE pweek.projectInteriorId=pin.id) > 1 ),
+		UNIX_TIMESTAMP((SELECT pweek.createTime FROM project_interior_week_acceptance pweek WHERE pweek.projectInteriorId=pin.id ORDER BY pweek.createTime DESC LIMIT 1,1)),
+		UNIX_TIMESTAMP(pin.allocationTime)))
+		]]>
+		AS `time`
+		FROM
+		users u,
+		project_interior pin
+		WHERE
+		pin.id=#{projectId}
+		AND u.id IN (SELECT userId FROM project_group_user WHERE projectGroupId=pin.projectGroupId)
+	</select>
+
+    <select id="queryInnerUserH" resultType="com.magic.ereal.business.entity.UserH">
+		SELECT
+		u.id AS userId,
+		u.`name` AS userName,
+		<![CDATA[
+		(SELECT SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 1000 * 3600)
+		FROM work_diary_sub wds,job_type jt,transactionsub ts,work_diary wd
+		WHERE wd.id=wds.workDiaryId AND wds.jobTypeId=jt.id AND jt.transactionSubId=ts.id
+		AND ts.id=4 AND wd.userId=u.id AND wds.projectId=pac.projectId AND wd.`status`=4003
+		AND  UNIX_TIMESTAMP(wds.startTime) >=
+		IF(
+			(SELECT COUNT(*) FROM project_acceptancerecord pa WHERE pa.type = 1 AND pa.`status` = 10
+			AND pa.projectId = pac.projectId ) = 1,
+			(select UNIX_TIMESTAMP(pwa.createTime) FROM project_week_acceptance pwa
+			WHERE pwa.projectId = pac.projectId AND pwa.`status` = 2 ORDER BY pwa.id DESC LIMIT 0,1),
+			(SELECT UNIX_TIMESTAMP(pa.createTime) FROM  project_acceptancerecord pa WHERE
+			pa.type = 1 AND pa.`status` = 10 AND pa.projectId = pac.projectId ORDER BY pa.id DESC LIMIT 0,1)
+		)
+		AND
+		UNIX_TIMESTAMP(wds.endTime) <=
+		(SELECT UNIX_TIMESTAMP(pa.createTime) FROM  project_acceptancerecord pa WHERE
+		pa.type = 1 AND pa.`status` = 10 AND pa.projectId = pac.projectId ORDER BY pa.id DESC LIMIT 0,1)) ]]> as time,
+
+		<![CDATA[
+		(SELECT SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 1000 * 3600)
+		FROM work_diary_sub wds,job_type jt,transactionsub ts,work_diary wd
+		WHERE wd.id=wds.workDiaryId AND wds.jobTypeId=jt.id AND jt.transactionSubId=ts.id
+		AND ts.id=4 AND wd.userId=u.id AND wds.projectId=pac.projectId AND wd.`status`=4003
+		AND  UNIX_TIMESTAMP(wds.startTime) >=
+		(select UNIX_TIMESTAMP(pwa.createTime) FROM project_week_acceptance pwa
+			WHERE pwa.projectId = pac.projectId AND pwa.`status` = 2 ORDER BY pwa.id DESC LIMIT 0,1)
+		AND
+		UNIX_TIMESTAMP(wds.endTime) <=
+		(SELECT UNIX_TIMESTAMP(pa.createTime) FROM  project_acceptancerecord pa WHERE
+		pa.type = 1 AND pa.`status` = 10 AND pa.projectId = pac.projectId ORDER BY pa.id DESC LIMIT 0,1)) ]]> AS totalTime
+
+		FROM users u ,project_acceptancerecord pac,project p
+		WHERE u.id IN (SELECT pgu.userId FROM project_group_user pgu WHERE pgu.projectGroupId=p.projectGroupId)
+		AND p.id = pac.projectId
+		AND pac.id = #{projectRecordId}
+	</select>
+
+
+    <select id="queryOuterUserH" resultType="com.magic.ereal.business.entity.UserH">
+		SELECT
+		u.id AS userId,
+		u.`name` AS userName,
+		<![CDATA[
+		(SELECT SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 1000 * 3600)
+		FROM work_diary_sub wds,job_type jt,transactionsub ts,work_diary wd
+		WHERE wd.id=wds.workDiaryId AND wds.jobTypeId=jt.id AND jt.transactionSubId=ts.id
+		AND ts.id=4 AND wd.userId=u.id AND wds.projectId=pac.projectId AND wd.`status`=4003
+		AND  UNIX_TIMESTAMP(wds.startTime) >=
+		IF(
+			(SELECT COUNT(*) FROM project_acceptancerecord pa WHERE pa.type = 2 AND pa.`status` = 0
+			AND pa.projectId = pac.projectId ) = 1,
+			(SELECT UNIX_TIMESTAMP(pa.createTime) FROM  project_acceptancerecord pa WHERE
+			pa.type = 1 AND pa.`status` = 10 AND pa.projectId = pac.projectId ORDER BY pa.id DESC LIMIT 0,1),
+			(SELECT UNIX_TIMESTAMP(pa.createTime) FROM  project_acceptancerecord pa WHERE
+			pa.type = 2 AND pa.`status` = 0 AND pa.projectId = pac.projectId ORDER BY pa.id DESC LIMIT 0,1)
+		)
+		AND
+		UNIX_TIMESTAMP(wds.endTime) <=
+		(SELECT UNIX_TIMESTAMP(pa.createTime) FROM  project_acceptancerecord pa WHERE
+		pa.type = 2 AND pa.`status` = 0 AND pa.projectId = pac.projectId ORDER BY pa.id DESC LIMIT 0,1)) ]]> as `time` ,
+		<![CDATA[
+		(SELECT SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 1000 * 3600)
+		FROM work_diary_sub wds,job_type jt,transactionsub ts,work_diary wd
+		WHERE wd.id=wds.workDiaryId AND wds.jobTypeId=jt.id AND jt.transactionSubId=ts.id
+		AND ts.id=4 AND wd.userId=u.id AND wds.projectId=pac.projectId AND wd.`status`=4003
+		AND  UNIX_TIMESTAMP(wds.startTime) >=
+		(SELECT UNIX_TIMESTAMP(pa.createTime) FROM  project_acceptancerecord pa WHERE
+			pa.type = 1 AND pa.`status` = 10 AND pa.projectId = pac.projectId ORDER BY pa.id DESC LIMIT 0,1)
+		AND
+		UNIX_TIMESTAMP(wds.endTime) <=
+		(SELECT UNIX_TIMESTAMP(pa.createTime) FROM  project_acceptancerecord pa WHERE
+		pa.type = 2 AND pa.`status` = 0 AND pa.projectId = pac.projectId ORDER BY pa.id DESC LIMIT 0,1)) ]]> as `time`
+
+		FROM users u ,project_acceptancerecord pac,project p
+		WHERE u.id IN (SELECT pgu.userId FROM project_group_user pgu WHERE pgu.projectGroupId=p.projectGroupId)
+		AND p.id = pac.projectId
+		AND pac.id = #{projectRecordId}
+	</select>
+
+    <select id="queryManagerByDepartment" resultMap="BaseResultMap">
+		SELECT
+			u.*
+		FROM
+			users u,
+			role r
+		WHERE
+			r.id = u.role_id
+		AND r.`level` = 1
+		AND u.department_id = #{departmentId}
+	</select>
+
+    <select id="queryUserByRole" resultMap="BaseResultMap">
+        SELECT
+        u.id,
+        u.account,
+        u.`name`,
+        u.role_id,
+        u.avatar,
+        u.phone,
+        u.department_id,
+        u.token,
+        u.deviceType,
+        u.deviceToken
+        FROM
+        `users` u,
+        `department` d
+        WHERE
+        u.department_id = d.id
+        <if test="departmentId != null">
+            AND u.id != (SELECT id FROM users WHERE department_id=#{departmentId} AND role_id = #{roleId})
+        </if>
+        <if test="roleId != null">
+            AND u.role_id=#{roleId}
+        </if>
+        <if test="departmentType != null">
+            AND d.`type`=#{departmentType}
+        </if>
+        GROUP BY u.id
+
+    </select>
+
+
+    <select id="getCompanyIdRole" resultMap="BaseResultMap">
+		SELECT
+		u.id,
+		u.account,
+		u.`name`,
+		u.role_id,
+		u.avatar,
+		u.phone,
+		u.department_id,
+		u.token,
+		u.deviceType,
+		u.deviceToken
+		FROM
+		`users` u,
+		`department` d
+		WHERE
+		u.department_id = d.id AND
+		u.role_id = #{roleId} AND
+		u.id NOT IN(IFNULL((select u1.id
+		from users u1 , department d2 where u1.department_id = d2.id and d2.id = #{departmentId}
+		and u1.role_id = #{roleId}),0)) AND
+		d.companyId = (select d1.companyId from department d1 where d1.id = #{departmentId})
+		GROUP BY u.id
+	</select>
+
+    <select id="queryManagerByUser" resultMap="BaseResultMap">
+		SELECT
+			u.id,
+			u.account,
+			u.`name`,
+			u.role_id,
+			u.avatar,
+			u.phone,
+			u.department_id,
+			u.token,
+			u.deviceType,
+			u.deviceToken
+		FROM
+			users u,
+			role r
+		WHERE
+		u.role_id=r.id
+		AND u.department_id=#{departmentId}
+		AND r.`level`=1
+		GROUP BY u.id
+
+	</select>
+
+    <select id="queryUserByProjectGroup" resultMap="BaseResultMap">
+		SELECT
+			u.id,
+			u.account,
+			u.`name`,
+			u.role_id,
+			u.avatar,
+			u.phone,
+			u.department_id,
+			u.token,
+			u.deviceType,
+			u.deviceToken
+		FROM
+			`users` u
+		WHERE
+			 FIND_IN_SET (u.id,(#{members}))
+	</select>
+
+    <select id="queryUserOtherInfo" resultMap="BaseResultMap">
+		SELECT
+			u.id,
+			u.account,
+			u.`name`,
+			u.role_id,
+			u.avatar,
+			u.phone,
+			u.department_id,
+			u.token,
+			u.deviceType,
+			u.deviceToken,
+			d.departmentName AS departmentName,
+			c.id AS companyId,
+			IF (
+			r.`level` IS NULL,
+			0,
+			r.`level`
+		) AS isManager
+		FROM
+			`users` u,department d ,role r ,company c
+		WHERE
+			u.department_id = d.id AND
+			r.id=u.role_id AND
+			c.id=d.companyId AND
+			u.id = #{id}
+	</select>
+
+    <select id="queryUserByDepartment" resultMap="BaseResultMap">
+        SELECT
+        u.*, d.departmentName AS departmentName,
+        IF (
+        r.`level` IS NULL,
+        0,
+        r.`level`
+        ) AS isManager,
+        r.role_name AS roleName
+        FROM
+        `users` u,
+        department d,
+        role r
+        WHERE
+        u.department_id = d.id
+        AND r.id=u.role_id
+        AND u.role_id NOT IN (1)
+		AND u.Incumbency NOT IN (3)
+        AND `department_id` = #{departmentId}
+        <if test="accreditType != null and accreditType != 100">
+            AND u.id NOT IN (SELECT toUserId FROM accredit a WHERE a.`type`=#{accreditType})
+            <if test="accreditType == 1">
+                <!-- 如果项目授权 -->
+                <if test="userId != null and userId != 0">
+                    AND IF((SELECT role_id FROM users WHERE id = #{userId}) = 7,r.id = 7, r.id = 12
+                    AND u.id NOT IN (SELECT bTeacherId FROM project WHERE aTeacher=#{userId})
+                    )
+                </if>
+            </if>
+            <if test="accreditType == 2">
+                <!-- 如果日志授权 -->
+                AND r.`level` = 1
+            </if>
+        </if>
+        <if test="userId != null and userId != 0">
+            AND u.id != #{userId}
+        </if>
+        GROUP BY u.id
+    </select>
+
+    <select id="queryUserByPhoneOrAccount" resultMap="BaseResultMap">
+		SELECT
+		IF (
+			r.`level` IS NULL,
+			0,
+			r.`level`
+		) AS isManager,
+		 u.*,
+		 d.departmentName AS departmentName,
+		 r.`role_name` AS roleName,
+		 c.id AS companyId,
+		 c.companyName AS companyName
+		FROM
+			`users` u,
+			role r,
+			department d,
+			company c
+		WHERE
+			r.id = u.role_id
+		AND  u.department_id = d.id
+		AND c.id=d.companyId
+		AND d.isValid = 1
+		AND u.Incumbency != 3
+		AND r.id != 1
+		AND (
+			`email` = #{account}
+			OR `account` = #{account}
+		)
+	</select>
+
+
+    <select id="queryUserByPhoneOrAccountForWeb" resultMap="IncludeRoles">
+		SELECT
+		IF (
+			r.`level` IS NULL,
+			0,
+			r.`level`
+		) AS isManager,
+		 u.*,
+		 d.departmentName AS departmentName,
+		 r.`role_name` AS roleName,
+		 c.id AS companyId,
+		 c.companyName AS companyName
+		FROM
+			`users` u,
+			role r,
+			department d,
+			company c
+		WHERE
+			r.id = u.role_id
+		AND  u.department_id = d.id
+		AND c.id=d.companyId
+		AND d.isValid =  1
+		AND u.Incumbency != 3
+		AND (
+			`email` = #{account}
+			OR `account` = #{account}
+		)
+	</select>
+
+
+    <select id="batchQueryUser" resultMap="BaseResultMap">
+
+
+        SELECT * FROM users
+        WHERE account IN
+        <foreach collection="accounts" index="index" open="(" close=")" separator="," item="acc">
+            #{acc}
+        </foreach>
+        OR
+        `email` IN
+        <foreach collection="emails" index="index" open="(" close=")" separator="," item="email">
+            #{email}
+        </foreach>
+
+    </select>
+
+    <!-- 根据id查询用户. -->
+    <select id="getUserById" resultMap="IncludeRoles">
+        SELECT
+            u.*, r.role_name AS roleName,
+            d.departmentName,
+            c.companyName,
+            c.id AS companyId,
+            c.type AS type
+        FROM
+            `users` u
+        LEFT JOIN role r ON u.role_id = r.id
+        LEFT JOIN department d ON d.id = u.department_id
+        LEFT JOIN company c ON d.companyId = c.id
+        WHERE
+            u.id = #{id}
+	</select>
+
+    <update id="updateUser">
+        UPDATE `users`
+        <set>
+            <if test="user.dimissionTime != null">
+                `dimissionTime`=#{user.dimissionTime},
+            </if>
+            <if test="user.infoStatus != null">
+                `infoStatus`=#{user.infoStatus},
+            </if>
+            <if test="user.isCTeacher != null">
+                `isCTeacher`=#{user.isCTeacher},
+            </if>
+            <if test="user.resignTime != null">
+                `resignTime`=#{user.resignTime},
+            </if>
+            <if test="user.practiceSalary != null">
+                `practiceSalary`=#{user.practiceSalary},
+            </if>
+            <if test="user.isFirst != null">
+                `isFirst`=#{user.isFirst},
+            </if>
+            <if test="user.lastLoginTime != null">
+                `lastLoginTime`=#{user.lastLoginTime},
+            </if>
+            <if test="user.deviceToken != null">
+                `deviceToken`=#{user.deviceToken},
+            </if>
+            <if test="user.deviceType != null">
+                `deviceType`=#{user.deviceType},
+            </if>
+            <if test="user.token != null">
+                `token`=#{user.token},
+            </if>
+            <if test="user.phone != null">
+                `phone`=#{user.phone},
+            </if>
+            <if test="user.email != null">
+                `email`=#{user.email},
+            </if>
+            <if test="user.updateTime != null">
+                `update_time`=#{user.updateTime},
+            </if>
+            <if test="user.salary != null">
+                `salary`=#{user.salary},
+            </if>
+            <if test="user.positiveTime != null">
+                `positive_time`=#{user.positiveTime},
+            </if>
+            <if test="user.incumbency != null">
+                `Incumbency`=#{user.incumbency},
+            </if>
+            <if test="user.hobby != null">
+                `hobby`=#{user.hobby},
+            </if>
+            <if test="user.sex != null">
+                `sex`=#{user.sex},
+            </if>
+            <if test="user.age != null">
+                `age`=#{user.age},
+            </if>
+            <if test="user.avatar != null">
+                `avatar`=#{user.avatar},
+            </if>
+            <if test="user.password != null">
+                `password`=#{user.password},
+            </if>
+            <if test="user.name != null">
+                `name`=#{user.name},
+            </if>
+            <if test="user.roleId != null">
+                `role_id`=#{user.roleId},
+            </if>
+            <if test="user.departmentId != null">
+                `department_id`=#{user.departmentId},
+            </if>
+            <if test="user.entryTime != null">
+                `entry_time`=#{user.entryTime},
+            </if>
+            <if test="user.birthday != null">
+                `birthday`=#{user.birthday},
+            </if>
+        </set>
+        WHERE `id`=#{user.id}
+    </update>
+
+
+    <!-- 添加用户 -->
+    <insert id="insert" parameterType="com.magic.ereal.business.entity.User" useGeneratedKeys="true" keyProperty="id">
+		insert into users
+		(account, password, `name`, role_id, avatar, age, sex, hobby, Incumbency,
+		positive_time, salary, create_time, update_time,`lastLoginTime`,birthday,
+		email,entry_time,phone,department_id,`isFirst`,`resignTime`,`practiceSalary`,`isCTeacher`,infoStatus)
+		values
+		(#{account}, #{password}, #{name}, #{roleId}, #{avatar}, #{age},
+		#{sex}, #{hobby}, #{incumbency}, #{positiveTime}, #{salary}, now(),now(),now(),
+		#{birthday},#{email},#{entryTime},#{phone},#{departmentId},1,#{resignTime},#{practiceSalary},#{isCTeacher},#{infoStatus})
+	</insert>
+
+
+    <insert id="batchAddUser">
+        insert into users
+        (account, password, `name`, role_id, avatar, age, sex, hobby, Incumbency,
+        positive_time, salary, create_time, update_time,`lastLoginTime`,birthday,
+        email,entry_time,phone,department_id,`isFirst`,`resignTime`,`practiceSalary`,`isCTeacher`,infoStatus)
+        values
+        <foreach collection="users" index="index" item="user" separator=",">
+            (#{user.account}, #{user.password}, #{user.name}, #{user.roleId}, #{user.avatar}, #{user.age},
+            #{user.sex}, #{user.hobby}, #{user.incumbency}, #{user.positiveTime}, #{user.salary}, now(),now(),now(),
+            #{user.birthday},#{user.email},#{user.entryTime},#{user.phone},#{user.departmentId},1,#{user.resignTime},#{user.practiceSalary},#{user.isCTeacher},#{user.infoStatus})
+        </foreach>
+    </insert>
+
+
+    <!-- 登录 -->
+    <select id="getUserByAccount" resultMap="BaseResultMap">
+		SELECT * FROM users u WHERE u.account = #{account} OR u.phone = #{account} OR u.email = #{account}
+	</select>
+
+    <!-- 修改密码 -->
+    <update id="updatePassword" parameterType="map">
+		UPDATE users SET
+			password = #{password}
+		where id = #{id}
+	</update>
+
+    <!-- 查询账号是否存在 -->
+    <select id="userAccountExist" resultType="int" parameterType="map">
+        select count(*) from users where account = #{account}
+        <if test="id != null and id != ''">
+            and id != #{id}
+        </if>
+    </select>
+
+    <!-- 分页查询/所有 用户 -->
+    <select id="findUserPageForWeb" resultMap="BaseResultMap" parameterType="map">
+        SELECT u.*,r.role_name AS roleName,d.departmentName,c.companyName
+        FROM `users` u
+        LEFT JOIN role r ON u.role_id = r.id LEFT JOIN department d ON d.id = u.department_id
+        LEFT JOIN company c ON d.companyId = c.id
+        WHERE  1=1
+       <!-- AND u.role_id NOT IN (1) -->
+        <if test="user.name != null and user.name != ''">
+            AND u.name LIKE '%${user.name}%'
+        </if>
+        <if test="user.roleId != null">
+            AND u.role_id = #{user.roleId}
+        </if>
+        <if test="user.phone != null and user.phone != ''">
+            AND u.phone LIKE '%${user.phone}%'
+        </if>
+        <if test="user.account != null and user.account != ''">
+            AND u.account LIKE '%${user.account}%'
+        </if>
+        <if test="user.sex != null">
+            ANd u.sex = #{user.sex}
+        </if>
+        <if test="user.departmentId != null">
+            ANd u.department_id = #{user.departmentId}
+        </if>
+        <if test="user.companyId != null">
+            ANd d.companyId = #{user.companyId}
+        </if>
+        <if test="user.incumbency != null">
+            ANd u.incumbency = #{user.incumbency}
+        </if>
+        ORDER BY
+        <if test="pageArgs != null">
+            <if test="pageArgs.column != null and pageArgs.column != ''">
+                ${pageArgs.column} ${pageArgs.order},
+            </if>
+        </if>
+        u.`create_time` DESC
+        <if test="pageArgs != null">
+            limit #{pageArgs.pageStart}, #{pageArgs.pageSize}
+        </if>
+    </select>
+
+    <!-- 分页查询/所有 用户 -->
+    <select id="findUserPageForWeb2" resultMap="BaseResultMap" parameterType="map">
+        SELECT u.*,r.role_name AS roleName,d.departmentName,c.companyName
+        FROM `users` u
+        LEFT JOIN role r ON u.role_id = r.id LEFT JOIN department d ON d.id = u.department_id
+        LEFT JOIN company c ON d.companyId = c.id
+        WHERE  1=1
+      	 AND u.role_id NOT IN (1)
+		  AND u.incumbency NOT IN (3)
+        <if test="user.name != null and user.name != ''">
+            AND u.name LIKE '%${user.name}%'
+        </if>
+        <if test="user.roleId != null">
+            AND u.role_id = #{user.roleId}
+        </if>
+        <if test="user.phone != null and user.phone != ''">
+            AND u.phone LIKE '%${user.phone}%'
+        </if>
+        <if test="user.account != null and user.account != ''">
+            AND u.account LIKE '%${user.account}%'
+        </if>
+        <if test="user.sex != null">
+            ANd u.sex = #{user.sex}
+        </if>
+        <if test="user.departmentId != null">
+            ANd u.department_id = #{user.departmentId}
+        </if>
+        <if test="user.companyId != null">
+            ANd d.companyId = #{user.companyId}
+        </if>
+
+        ORDER BY
+        <if test="pageArgs != null">
+            <if test="pageArgs.column != null and pageArgs.column != ''">
+                ${pageArgs.column} ${pageArgs.order},
+            </if>
+        </if>
+        u.`create_time` DESC
+        <if test="pageArgs != null">
+            limit #{pageArgs.pageStart}, #{pageArgs.pageSize}
+        </if>
+    </select>
+
+    <select id="getUserIsManagerList" resultMap="BaseResultMap">
+		select * from users u , role r
+		WHERE u.role_id = r.id AND r.level = 1
+		AND u.department_id = #{departmentId}
+	</select>
+
+    <select id="queryWeekUserHByProject" resultType="com.magic.ereal.business.entity.UserH">
+		SELECT
+		u.id AS userId,
+		u.`name` AS userName,
+		<![CDATA[
+		(SELECT SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) /  3600) FROM
+		work_diary_sub wds,work_diary wd
+		WHERE wd.id=wds.workDiaryId and wds.transactionSubId=4 and wd.userId=u.id and wds.jobTypeId=p.id and wd.`status`=4004
+		AND UNIX_TIMESTAMP(wds.startTime) >=
+		IF( (SELECT COUNT(*) FROM project_week_acceptance pweek WHERE pweek.projectId=p.id) > 1 ,
+		UNIX_TIMESTAMP((SELECT createTime FROM project_week_acceptance WHERE projectId=p.id ORDER BY id DESC LIMIT 1,1))
+		,UNIX_TIMESTAMP(p.allocationTime))
+		AND UNIX_TIMESTAMP(wds.endTime) <= UNIX_TIMESTAMP((SELECT createTime FROM project_week_acceptance WHERE projectId=p.id ORDER BY id DESC LIMIT 0,1)))
+		AS `time`,
+
+		(SELECT SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) /  3600) FROM
+		work_diary_sub wds,work_diary wd
+		WHERE wd.id=wds.workDiaryId and wds.transactionSubId=4 and wd.userId=u.id and wds.jobTypeId=p.id and wd.`status`=4004
+		) ]]>
+		AS `totalTime`
+
+		FROM users u,project p
+		WHERE
+		p.id=#{projectId}
+		AND u.id IN (SELECT pgu.userId FROM project_group_user pgu WHERE pgu.projectGroupId=p.projectGroupId )
+	</select>
+
+
+    <select id="queryComprehensiveManager" resultMap="BaseResultMap">
+
+		SELECT
+			u.id,
+			u.account,
+			u.`name`,
+			u.role_id,
+			u.avatar,
+			u.phone,
+			u.department_id,
+			u.token,
+			u.deviceType,
+			u.deviceToken
+		FROM
+			users u,
+			role r
+		WHERE
+		u.role_id=10
+		AND
+		 u.department_id IN (  SELECT id FROM department WHERE companyId IN  (SELECT companyId FROM department WHERE id = #{departmentId} ))
+		GROUP BY u.id
+
+
+	</select>
+
+    <select id="queryManager" resultMap="BaseResultMap">
+		SELECT IF (
+			r.`level` IS NULL,
+			0,
+			r.`level`
+		) AS isManager,
+		u.* FROM users u, role r
+		WHERE
+		u.role_id=r.id
+		AND   u.department_id  =  (SELECT department_id FROM users WHERE id=#{userId})
+		AND r.`level`=1
+	</select>
+
+
+    <select id="staticsMaxK" resultMap="BaseResultMap">
+		
+		SELECT
+          uss.id,uss.`name`,uss.age,uss.avatar,
+          SUM((IFNULL(pwks.wtk,0) + IFNULL(pks.pk,0) + IFNULL(kns.pk,0) + IFNULL(klss.kls,0) + IFNULL(kcgs.kcg,0)) )  AS totalK,
+					d.departmentName,r.role_name AS roleName
+          
+          FROM allconfig cfg , department d ,role r,users uss
+          /**  外部项目周验收k值统计 */
+          LEFT JOIN (SELECT SUM(p.sectionSumK * p.ratio / 100) AS wtk,p.userId AS uId
+            FROM project_week_k_allocation p WHERE p.userId AND
+            p.createTime BETWEEN #{startTime} AND #{endTime}  GROUP BY p.userId) AS pwks ON uss.id = pwks.uId
+          /**  外部项目结项k值统计 */
+          LEFT JOIN (SELECT SUM(IF(p.sumK IS NULL,0 ,p.sumK)) AS pk,p.userId AS uId FROM project_k p WHERE
+            p.createTime BETWEEN #{startTime} AND #{endTime}  GROUP BY p.userId) AS pks ON uss.id = pks.uId
+          /**  内部项目k值统计 */
+          LEFT JOIN (SELECT SUM(IFNULL(p.k,0)) AS pk,p.userId AS uId FROM project_interior_week_k_allocation p WHERE
+            p.createTime BETWEEN #{startTime} AND #{endTime}  GROUP BY p.userId) AS kns ON uss.id = kns.uId
+          /** k 临时*/
+          LEFT JOIN (SELECT
+                        (SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600 )  / (SELECT IFNULL(a.kHour,135) FROM allconfig a) *
+                        IFNULL(sm.score,100)) as kls,wd.userId AS uId
+                        FROM work_diary wd,work_diary_sub wds,job_type jt,transactionsub sub,
+                        (SELECT sm.score FROM score_month sm WHERE sm.`type`=2 AND sm.dateType = 1
+                        AND sm.`month` BETWEEN #{startTime} AND #{endTime} ) as sm
+                        WHERE
+                        wds.workDiaryId=wd.id
+                        AND jt.id=wds.jobTypeId
+                        AND sub.id=jt.transactionSubId
+                        AND sub.id=2
+                        AND wd.workTime BETWEEN #{startTime} AND #{endTime}  GROUP BY wd.userId) AS klss ON klss.uId = uss.id
+          /** k 常规*/
+          LEFT JOIN (SELECT (SUM(jt.jobTypeTime) / (SELECT IFNULL(a.kHour,135) FROM allconfig a) *
+                    (IFNULL(sm.score, 1))) as kcg, wd.userId AS uId
+                    FROM job_type jt,work_diary wd,work_diary_sub wds ,
+                    (SELECT score FROM score_month WHERE `type`=1 AND dateType = 1
+                    AND `month` BETWEEN #{startTime} AND #{endTime} ) as sm
+                    WHERE jt.id = wds.jobTypeId AND
+                    jt.transactionSubId = 1 AND
+                    wd.id = wds.workDiaryId AND
+                    wd.workTime BETWEEN #{startTime} AND #{endTime}  GROUP BY wd.userId
+                    ) AS kcgs ON kcgs.uId = uss.id
+        WHERE uss.role_id=r.id AND uss.department_id=d.id
+						AND uss.id IN (SELECT u.id FROM users u WHERE u.department_id
+            IN (SELECT d.id FROM department d WHERE d.companyId = #{companyId}))    GROUP BY uss.id ORDER BY totalK DESC
+
+	</select>
+
+
+</mapper>

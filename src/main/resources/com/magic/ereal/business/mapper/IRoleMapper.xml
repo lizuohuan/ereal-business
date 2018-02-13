@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IRoleMapper">
+
+	<resultMap id="BaseResultMap" type="com.magic.ereal.business.entity.Role" >
+		<id column="id" property="id" javaType="java.lang.Integer" />
+		<id column="type" property="type" javaType="java.lang.Integer" />
+		<id column="role_name" property="roleName" javaType="java.lang.String" />
+		<id column="describe" property="describe" javaType="java.lang.String" />
+	</resultMap>
+
+
+	<resultMap id="includeAdminUrl" type="com.magic.ereal.business.entity.Role" extends="BaseResultMap">
+		<association property="roleUrls" column="id" select="com.magic.ereal.business.mapper.IRoleMenuMapper.queryUrlByRole"/>
+	</resultMap>
+
+	<!--权限列表-->
+	<select id="list" resultMap="BaseResultMap">
+		SELECT * FROM `role` r
+		WHERE 1 = 1
+		<if test="type != null">
+			AND r.type = #{type}
+		</if>
+		AND r.isValid = 1
+		ORDER BY r.type ASC, r.id ASC
+	</select>
+
+	<!--权限列表-->
+	<select id="listWeb" resultMap="BaseResultMap">
+		SELECT * FROM `role` r
+		WHERE 1 = 1
+		<if test="type != null">
+			AND r.type = #{type}
+		</if>
+		ORDER BY r.type ASC, r.id ASC
+	</select>
+
+	<!--添加角色-->
+	<insert id="insert" parameterType="com.magic.ereal.business.entity.Role">
+		INSERT INTO role(`type`,`role_name`,`level`,`describe`,isValid)
+		VALUES (#{type},#{roleName},#{level},#{describe},1)
+	</insert>
+
+
+	<select id="queryAdminRole" resultMap="includeAdminUrl">
+		SELECT
+			r.*
+		FROM
+			admin_role ar,
+			role r
+		WHERE
+			ar.roleId = r.id
+		AND ar.userId = #{userId}
+	</select>
+
+	<update id="updateRole">
+		UPDATE `role`
+		<set>
+			<if test="role.isValid != null">
+				`isValid` = #{role.isValid},
+			</if>
+			<if test="role.roleName != null">
+				`role_name` = #{role.roleName},
+			</if>
+			<if test="role.describe != null">
+				`describe` = #{role.describe},
+			</if>
+		</set>
+		WHERE 	`id` = #{role.id}
+	</update>
+
+
+
+
+
+
+
+
+
+</mapper>

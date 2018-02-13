@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IBannerMapper">
+
+
+
+    <select id="queryBannerByType" resultType="com.magic.ereal.business.entity.Banner">
+        SELECT * FROM banner WHERE  `type` = #{type}
+    </select>
+
+
+    <select id="queryBannerByType_" resultType="com.magic.ereal.business.entity.Banner">
+        SELECT * FROM banner WHERE  `type` = #{type} AND isShow = 1
+    </select>
+
+    <insert id="save" keyProperty="id" useGeneratedKeys="true" parameterType="com.magic.ereal.business.entity.Banner">
+        insert into banner (imgUrl, remarks, createTime, updateTime, context, isShow, `order`,
+        title,createUserId,`type`,`status`,auditUserId,timeType,dimensionType,companyId)
+        values (#{imgUrl},#{remarks},now(),now(),#{context},#{isShow},#{order},#{title},
+        #{createUserId},#{type},0,#{auditUserId},#{timeType},#{dimensionType},#{companyId})
+    </insert>
+
+    <update id="updateAll" parameterType="com.magic.ereal.business.entity.Banner">
+        update banner set
+        imgUrl = #{imgUrl},
+        remarks = #{remarks},
+        context = #{context},
+        isShow = #{isShow},
+        `order` = #{order},
+        title = #{title},
+        `type` = #{type},
+        `status` = #{status},
+        `timeType` = #{timeType},
+        `dimensionType` = #{dimensionType},
+        `auditUserId` = #{auditUserId},
+        updateTime = now()
+        where id = #{id} ;
+    </update>
+
+    <update id="update" parameterType="com.magic.ereal.business.entity.Banner">
+        update banner
+        <set>
+            <if test="imgUrl != null and imgUrl != ''">
+                imgUrl = #{imgUrl},
+            </if>
+            <if test="remarks != null and remarks != ''">
+                remarks = #{remarks},
+            </if>
+            <if test="context != null and context != ''">
+                context = #{context},
+            </if>
+            <if test="isShow != null">
+                isShow = #{isShow},
+            </if>
+            <if test="order != null">
+                `order` = #{order},
+            </if>
+            <if test="status != null">
+                `status` = #{status},
+            </if>
+            <if test="type != null">
+                `type` = #{type},
+            </if>
+            <if test="dimensionType != null">
+                `dimensionType` = #{dimensionType},
+            </if>
+            <if test="timeType != null">
+                `timeType` = #{timeType},
+            </if>
+            <if test="auditUserId != null">
+                `auditUserId` = #{auditUserId},
+            </if>
+            <if test="title != null and title != ''">
+                title = #{title},
+            </if>
+            updateTime = now()
+        </set>
+        where id = #{id}
+    </update>
+
+    <select id="list" resultType="com.magic.ereal.business.entity.Banner" parameterType="map">
+        select b.*,u.name,au.name AS auditUserName,c.companyName from banner b LEFT JOIN users au ON b.auditUserId = au.id,
+        users u ,company c,department d
+        WHERE b.createUserId = u.id
+        AND u.department_id = d.id
+        AND d.companyId = c.id
+        <if test="b.title != null and b.title != ''">
+            AND b.title LIKE '%${b.title}%'
+        </if>
+        <if test="b.name != null and b.name != ''">
+            AND u.name LIKE '%${b.name}%'
+        </if>
+        <if test="b.isShow != null">
+            AND b.isShow = #{b.isShow}
+        </if>
+        <if test="b.type != null">
+            AND b.`type` = #{b.type}
+        </if>
+        <if test="b.status != null">
+            AND b.`status` = #{b.status}
+        </if>
+        <if test="b.companyId != null">
+            AND b.`companyId` = #{b.companyId}
+        </if>
+        <if test="b.dimensionType != null">
+            AND b.`dimensionType` = #{b.dimensionType}
+        </if>
+        <if test="b.timeType != null">
+            AND b.`timeType` = #{b.timeType}
+        </if>
+        <if test="b.auditUserName != null">
+            AND au.`name` LIKE '%${b.auditUserName}%'
+        </if>
+        order by
+        <if test="pageArgs != null">
+            <if test="pageArgs.column != null and pageArgs.column != ''">
+                ${pageArgs.column} ${pageArgs.order},
+            </if>
+        </if>
+        b.`order` DESC
+        <if test="pageArgs != null">
+            limit #{pageArgs.pageStart}, #{pageArgs.pageSize}
+        </if>
+    </select>
+
+    <select id="count" resultType="integer" parameterType="map">
+        select COUNT(*) from banner b LEFT JOIN users au ON b.auditUserId = au.id,
+        users u ,company c,department d
+        WHERE b.createUserId = u.id
+        AND u.department_id = d.id
+        AND d.companyId = c.id
+        <if test="b.title != null and b.title != ''">
+            AND b.title LIKE '%${b.title}%'
+        </if>
+        <if test="b.name != null and b.name != ''">
+            AND u.name LIKE '%${b.name}%'
+        </if>
+        <if test="b.isShow != null">
+            AND b.isShow = #{b.isShow}
+        </if>
+        <if test="b.type != null">
+            AND b.`type` = #{b.type}
+        </if>
+        <if test="b.status != null">
+            AND b.`status` = #{b.status}
+        </if>
+        <if test="b.companyId != null">
+            AND b.`companyId` = #{b.companyId}
+        </if>
+        <if test="b.dimensionType != null">
+            AND b.`dimensionType` = #{b.dimensionType}
+        </if>
+        <if test="b.timeType != null">
+            AND b.`timeType` = #{b.timeType}
+        </if>
+        <if test="b.auditUserName != null">
+            AND au.`name` LIKE '%${b.auditUserName}%'
+        </if>
+    </select>
+
+    <select id="listForApp" resultType="com.magic.ereal.business.entity.Banner" >
+        SELECT * FROM banner b1 WHERE b1.isShow = 1 AND b1.`status` = 1 AND (b1.`type` IN (1,2)) AND b1.dimensionType = 0 AND b1.timeType = 0 AND b1.companyId = #{companyId} LIMIT 0,1  UNION
+        SELECT * FROM banner b2 WHERE b2.isShow = 1 AND b2.`status` = 1 AND (b2.`type` IN (1,2)) AND b2.dimensionType = 0 AND b2.timeType = 1 AND b2.companyId = #{companyId} LIMIT 0,1  UNION
+        SELECT * FROM banner b3 WHERE b3.isShow = 1 AND b3.`status` = 1  AND (b3.`type` IN (1,2)) AND b3.dimensionType = 1 AND b3.timeType = 0 AND b3.companyId = #{companyId} LIMIT 0,1  UNION
+        SELECT * FROM banner b4 WHERE b4.isShow = 1 AND b4.`status` = 1 AND (b4.`type` IN (1,2)) AND b4.dimensionType = 1 AND b4.timeType = 1 AND b4.companyId = #{companyId} LIMIT 0,1  UNION
+        SELECT * FROM banner b5 WHERE b5.isShow = 1 AND b5.`status` = 1  AND (b5.`type` IN (1,2))AND b5.dimensionType = 2 AND b5.timeType = 0 AND b5.companyId = #{companyId} LIMIT 0,1  UNION
+        SELECT * FROM banner b6 WHERE b6.isShow = 1 AND b6.`status` = 1 AND (b6.`type` IN (1,2)) AND b6.dimensionType = 2 AND b6.timeType = 1 AND b6.companyId = #{companyId} LIMIT 0,1  UNION
+        SELECT * FROM banner b7 WHERE b7.isShow = 1  AND (b7.`type` IN (1,2))  ORDER BY id DESC,`order` DESC
+    </select>
+
+    <select id="listForAppBanner" resultType="com.magic.ereal.business.entity.Banner" >
+        SELECT
+            *
+        FROM
+            banner b
+        WHERE
+           (
+            (
+                b.type = 2
+                AND b.`status` = 1
+                AND companyId = #{companyId}
+            )
+          OR (b.type = 1)
+        )
+        AND b.isShow = 1
+    </select>
+
+    <select id="info" resultType="com.magic.ereal.business.entity.Banner" >
+        select * from banner b
+        WHERE b.id = #{id}
+    </select>
+
+
+    <select id="getByDimensionType" resultType="com.magic.ereal.business.entity.Banner" >
+        select * from banner b WHERE b.dimensionType = #{dimensionType}
+        order by b.id DESC limit #{pageArgs.pageStart}, #{pageArgs.pageSize}
+    </select>
+
+</mapper>

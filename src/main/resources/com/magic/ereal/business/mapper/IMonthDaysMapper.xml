@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IMonthDaysMapper">
+
+
+
+    <select id="queryMonthDaysById" resultType="com.magic.ereal.business.entity.MonthDays">
+        SELECT * FROM month_days WHERE id = #{id}
+    </select>
+
+    <select id="queryMonth" resultType="com.magic.ereal.business.entity.MonthDays">
+        SELECT
+            dateTime,
+            id,
+            days
+        FROM
+            month_days
+        WHERE
+            DATE_FORMAT(dateTime, '%Y') = DATE_FORMAT(#{date}, '%Y')
+            ORDER BY dateTime ASC
+    </select>
+
+    <select id="list" resultType="com.magic.ereal.business.entity.MonthDays" parameterType="map">
+        select * from month_days m WHERE 1 = 1
+        <if test="dateTime != null">
+            AND DATE_FORMAT(m.dateTime,'%Y-%m') = DATE_FORMAT(#{dateTime},'%Y-%m')
+        </if>
+        order by
+        <if test="pageArgs != null">
+            <if test="pageArgs.column != null and pageArgs.column != ''">
+                ${pageArgs.column} ${pageArgs.order},
+            </if>
+        </if>
+        m.id DESC
+        <if test="pageArgs != null">
+            limit #{pageArgs.pageStart}, #{pageArgs.pageSize}
+        </if>
+    </select>
+
+    <select id="listCount" resultType="int" parameterType="map">
+        select COUNT(*) from month_days m WHERE 1 = 1
+        <if test="dateTime != null">
+            AND DATE_FORMAT(m.dateTime,'%Y-%m') = DATE_FORMAT(#{dateTime},'%Y-%m')
+        </if>
+    </select>
+
+
+    <insert id="save" parameterType="com.magic.ereal.business.entity.MonthDays" >
+        insert into month_days (dateTime, days) values (#{dateTime} ,#{days});
+    </insert>
+
+    <update id="update" parameterType="com.magic.ereal.business.entity.MonthDays">
+        update month_days
+        <set>
+            <if test="days != null">
+                days = #{days} ,
+            </if>
+            <if test="dateTime != null">
+                dateTime = #{dateTime}
+            </if>
+        </set>
+         where id = #{id}
+    </update>
+
+    <select id="isHave" resultType="int" >
+      select COUNT(*) from month_days m
+      WHERE DATE_FORMAT(m.dateTime,'%Y-%m') = DATE_FORMAT(#{dateTime},'%Y-%m')
+    </select>
+
+
+</mapper>

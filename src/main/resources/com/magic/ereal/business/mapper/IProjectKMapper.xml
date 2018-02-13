@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IProjectKMapper" >
+
+
+
+    <insert id="batchAddProjectK">
+        INSERT INTO `project_k`
+        (`projectRecordId`,`userId`,`ratio`,`sumK`,`createTime`,`createUserId`)
+        VALUES
+        <foreach collection="projectKs" index="index" item="projectK" separator=",">
+            (#{projectK.projectRecordId},#{projectK.userId},#{projectK.ratio},#{projectK.sumK},now(),#{projectK.createUserId})
+        </foreach>
+    </insert>
+
+
+    <select id="queryProjectKByProjectRecordId" resultType="com.magic.ereal.business.entity.ProjectK">
+        SELECT
+            pk.*,
+            u.`name` AS userName
+        FROM
+            project_k pk,
+            project_acceptancerecord r,
+            users u
+        WHERE
+            pk.projectRecordId = r.id
+        AND u.id=pk.userId
+        AND r.id = #{projectRecordId}
+    </select>
+
+
+
+    <select id="queryProjectKByProjectRecordId2" resultType="com.magic.ereal.business.entity.ProjectK">
+        SELECT
+            pk.*, u.`name` AS userName,
+            CASE u.id WHEN pg.projectManagerId THEN 1
+                                WHEN p.aTeacher THEN 0
+                                ELSE 2 END AS `role`
+        FROM
+            project_k pk,
+            project_acceptancerecord r,
+            users u,
+            project p,
+            project_group pg
+        WHERE
+            pk.projectRecordId = r.id
+        AND p.id = r.projectId
+        AND pg.id = p.projectGroupId
+        AND u.id = pk.userId
+        AND r.id = #{projectRecordId}
+    </select>
+
+
+</mapper>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IDepartmentChangeRecordMapper" >
+
+
+
+
+    <select id="queryRecord" resultType="com.magic.ereal.business.entity.DepartmentChangeRecord">
+        SELECT * FROM department_change_record WHERE userId = #{userId}
+        AND DATE_FORMAT(dateMonth,'%Y-%m') = DATE_FORMAT(#{dateMonth},'%Y-%m')
+    </select>
+
+    <insert id="addDepartmentChangeRecord" parameterType="com.magic.ereal.business.entity.DepartmentChangeRecord">
+        INSERT INTO department_change_record ( userId, fromDepartmentId, toDepartmentId, dateMonth, createTime)
+        VALUES ( #{userId}, #{fromDepartmentId}, #{toDepartmentId}, #{dateMonth}, NOW())
+    </insert>
+
+    <update id="updateDepartmentChangeRecord" parameterType="com.magic.ereal.business.entity.DepartmentChangeRecord">
+        UPDATE department_change_record
+        <set>
+          <if test="toDepartmentId != null">
+              toDepartmentId = #{toDepartmentId},
+          </if>
+          <if test="fromDepartmentId != null">
+              fromDepartmentId = #{fromDepartmentId},
+          </if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+
+
+
+
+</mapper>

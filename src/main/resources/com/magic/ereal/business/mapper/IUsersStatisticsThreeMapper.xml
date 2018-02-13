@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IUsersStatisticsThreeMapper">
+
+    <resultMap id="BaseResult" type="com.magic.ereal.business.entity.UsersStatisticsThree">
+        <result column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="userId" property="userId" javaType="java.lang.Integer"/>
+        <result column="userStatisticsId" property="userStatisticsId" javaType="java.lang.Integer"/>
+        <result column="threeVeidooId" property="threeVeidooId" javaType="java.lang.Integer"/>
+        <result column="threeVeidooScore" property="threeVeidooScore" javaType="java.lang.Double"/>
+        <result column="threeVeidooName" property="threeVeidooName" javaType="java.lang.Double"/>
+    </resultMap>
+
+    
+    <select id="list" resultMap="BaseResult" >
+      select ust.*,tv.targetName AS threeVeidooName from users_statistics_three ust ,three_veidoo tv
+      WHERE ust.userStatisticsId = tv.id AND
+      ust.userStatisticsId = #{userStatisticsId}
+    </select>
+
+    <select id="listForAPI" parameterType="map" resultType="com.magic.ereal.business.entity.UsersStatisticsThree">
+        SELECT
+            ust.id,
+            ust.threeVeidooScore,
+            ust.userStatisticsId,
+            ust.userId,
+            tv.targetName AS threeVeidooName,
+            tv.id AS threeVeidooId,
+            tvs.msg AS msg
+        FROM
+            users_statistics_three ust,
+            three_veidoo tv,
+            three_veidoo_score tvs
+        WHERE
+         ust.threeVeidooId = tvs.id
+        AND tvs.threeVerdooId = tv.id
+        AND tvs.startTime = #{startTime}
+        AND tvs.endTime = #{endTime}
+        AND tvs.userId = #{userId}
+        ORDER BY threeVeidooId ASC
+    </select>
+
+    <delete id="deleteByUserStatisticsId">
+      DELETE FROM users_statistics_three WHERE userStatisticsId = #{userStatisticsId}
+    </delete>
+
+    <delete id="deleteByUserStatisticsIdList">
+      DELETE FROM users_statistics_three 
+      WHERE userStatisticsId IN (
+      <foreach collection="userStatisticsIds" item="id" separator=",">
+          #{id}
+      </foreach>
+      )
+    </delete>
+
+    <delete id="delete">
+      DELETE FROM users_statistics_three WHERE id = #{id}
+    </delete>
+
+    <insert id="save" parameterType="com.magic.ereal.business.entity.UsersStatisticsThree">
+        insert into users_statistics_three (userId, userStatisticsId, threeVeidooId, threeVeidooScore)
+        values (#{userId},#{userStatisticsId},#{threeVeidooId},#{threeVeidooScore})
+    </insert>
+
+    <insert id="saveList" parameterType="list">
+        insert into users_statistics_three (userId, userStatisticsId, threeVeidooId, threeVeidooScore)
+        values
+        <foreach collection="list" separator="," item="u" >
+            (#{u.userId},#{u.userStatisticsId},#{u.threeVeidooId},#{u.threeVeidooScore})
+        </foreach>
+    </insert>
+
+</mapper>

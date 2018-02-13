@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IWorkDiarySubMapper" >
+
+
+    <select id="queryNewSub" resultType="com.magic.ereal.business.entity.WorkDiarySub">
+        SELECT * FROM work_diary_sub wds WHERE wds.workDiaryId = #{wordDiaryId} ORDER BY wds.id DESC LIMIT 0,1
+    </select>
+
+    <select id="excelOfWorkDiary" resultType="com.magic.ereal.business.entity.ExcelOfWorkDiary">
+        SELECT
+            wd.workTime,
+            u.`name` AS userName ,wds.startTime,wds.endTime,
+            (CASE WHEN wds.transactionSubId = 3 THEN (SELECT pii.projectName FROM project_interior pii WHERE wds.jobTypeId = pii.id)
+                      WHEN wds.transactionSubId = 4 THEN (SELECT pii.projectName FROM project pii WHERE wds.jobTypeId = pii.id)
+                      ELSE (SELECT jobTypeName FROM job_type jt WHERE wds.jobTypeId = jt.id) END) AS typeName,
+            wds.jobContent,
+        (SELECT
+        CASE ts.id
+            WHEN 3 THEN '内部项目'
+            WHEN 4 THEN '外部项目'
+            ELSE (SELECT
+                CASE tss.id WHEN 1 THEN '常规性事务'
+                            WHEN 2 THEN '临时性事务'
+                            WHEN 3 THEN '内部项目'
+                            WHEN 4 THEN '外部项目'
+                            WHEN 5 THEN  '学习时间'
+                            WHEN 6 THEN '运动时间' END
+                FROM job_type jt ,transactionsub tss WHERE jt.transactionSubId = tss.id AND jt.id = wds.jobTypeId) END
+        FROM transactionsub ts WHERE ts.id = wds.transactionSubId) categoryName,
+
+            (CASE WHEN 	wd.workTime >= u.positive_time THEN '转正期间' ELSE '实习期间' END) AS during,
+            ((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) AS time,
+            (SELECT
+                CASE ty.id WHEN 1 THEN '工作时间'
+                WHEN 2 THEN '学习时间'
+                WHEN 3 THEN '运动时间'
+                ELSE ty.transactionName END
+          FROM transactionsub ts,transactiontype ty WHERE ts.transactionTypeId = ty.id AND ts.id = wds.transactionSubId) AS transactionType
+
+        FROM
+            work_diary wd,
+            work_diary_sub wds,
+            users u,
+            department d
+        WHERE
+            wd.id = wds.workDiaryId
+        AND wd.userId = u.id
+        AND d.id = u.department_id
+        AND wd.`status` = 4004
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        <if test="departmentId != null">
+            AND u.department_id = #{departmentId}
+        </if>
+        <if test="startTime != null">
+            AND DATE_FORMAT(wd.workTime,'%y-%m-%d') >= DATE_FORMAT(#{startTime},'%y-%m-%d')
+        </if>
+        <if test="endTime != null">
+            <![CDATA[
+            AND DATE_FORMAT(wd.workTime,'%y-%m-%d') <= DATE_FORMAT(#{endTime},'%y-%m-%d')
+            ]]>
+        </if>
+    </select>
+
+
+    <select id="countExcelOfWorkDiarySub" resultType="com.magic.ereal.business.entity.ExcelOfWorkDiarySub">
+        SELECT
+            u.`name` AS userName,
+            IFNULL(SUM(CASE WHEN ty.id = 1 OR wds.transactionSubId=3 OR wds.transactionSubId=4  THEN ((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) END),0) AS workTime,
+            IFNULL(SUM(CASE WHEN ty.id = 2 THEN ((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) END),0) AS studyTime,
+            IFNULL(SUM(CASE WHEN ty.id = 3 THEN ((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) END),0) AS sportTime,
+            wd.workTime AS `date`,
+            u.id
+        FROM
+            users u
+        LEFT JOIN department d ON u.department_id = d.id
+        LEFT JOIN work_diary wd ON wd.userId = u.id AND wd.`status` = 4004
+        LEFT JOIN work_diary_sub wds ON wd.id = wds.workDiaryId
+        LEFT JOIN job_type jt ON jt.id = wds.jobTypeId
+        LEFT JOIN transactionsub ts ON jt.transactionSubId = ts.id
+        LEFT JOIN transactiontype ty ON ty.id = ts.transactionTypeId
+        WHERE
+         wd.workTime IS NOT NULL
+        AND wd.`status` = 4004
+        AND wd.userId = #{userId}
+        AND DATE_FORMAT(wd.workTime,'%Y-%m') = DATE_FORMAT(#{month},'%Y-%m')
+        GROUP BY DATE_FORMAT(wd.workTime,'%Y-%m-%d'),wd.userId
+    </select>
+
+
+    <select id="queryWorkDiarySubByWork" resultType="com.magic.ereal.business.entity.WorkDiarySub">
+        SELECT
+            wds.*
+        FROM
+            work_diary_sub wds
+        WHERE
+            wds.workDiaryId = #{workId}
+        AND wds.id != #{subId}
+    </select>
+
+    <select id="queryByDateAndWorkDiary" resultType="com.magic.ereal.business.entity.WorkDiarySub">
+        SELECT
+            wds.*
+        FROM
+            work_diary_sub wds
+        WHERE
+            wds.workDiaryId = #{workDiaryId}
+        AND wds.startTime = #{startTime}
+        AND wds.endTime = #{endTime}
+    </select>
+
+
+    <insert id="addWorkDiarySub" useGeneratedKeys="true" keyProperty="workDiarySub.id">
+        INSERT INTO `work_diary_sub`
+        (`jobTypeId`,`startTime`,`endTime`,`jobContent`,`createTime`,`updateTime`,`workDiaryId`,`projectId`,`transactionSubId`)
+        VALUES
+        (#{workDiarySub.jobTypeId},#{workDiarySub.startTime}
+        ,#{workDiarySub.endTime},#{workDiarySub.jobContent},now(),now(),#{workDiarySub.workDiaryId},#{workDiarySub.projectId},#{workDiarySub.transactionSubId})
+    </insert>
+
+    <insert id="batchAddWorkDiarySub">
+        INSERT INTO `work_diary_sub`
+        (`jobTypeId`,`startTime`,`endTime`,`jobContent`,`createTime`,`updateTime`,`workDiaryId`,`projectId`,`transactionSubId`)
+        VALUES
+        <foreach collection="workDiarySubs" item="workDiarySub" index="index" separator=",">
+            (#{workDiarySub.jobTypeId},#{workDiarySub.startTime}
+            ,#{workDiarySub.endTime},#{workDiarySub.jobContent},now(),now(),#{workDiarySub.workDiaryId},#{workDiarySub.projectId},#{workDiarySub.transactionSubId})
+        </foreach>
+    </insert>
+
+    <select id="queryWorkDiarySubByWorkDiary" resultType="com.magic.ereal.business.entity.WorkDiarySub">
+        SELECT
+            wd.id,wd.jobTypeId,wd.timeTypeId,wd.startTime,wd.endTime,wd.jobContent,wd.createTime,
+            wd.updateTime,wd.workDiaryId,wd.projectId,wd.transactionSubId,
+            CASE wd.transactionSubId WHEN 3  THEN 1 WHEN 4 THEN 1 ELSE ty.id END AS transactionTypeId,
+            IF(wd.transactionSubId = 3,'内部', IF(wd.transactionSubId = 4,'外部',ts.transactionSubName)) AS transactionSubName,
+            CASE wd.transactionSubId WHEN 3  THEN '工作' WHEN 4 THEN '工作' ELSE ty.transactionName END AS transactionTypeName,
+            IF(wd.transactionSubId = 3,
+                    (SELECT shortName FROM project_interior WHERE id=wd.jobTypeId),
+                    IF(wd.transactionSubId = 4,
+                        (SELECT projectNameShort FROM project WHERE id=wd.jobTypeId)
+            ,jt.jobTypeName)) AS jobTypeName
+        FROM
+            work_diary_sub wd
+        LEFT JOIN job_type jt ON wd.jobTypeId = jt.id
+        LEFT JOIN transactionsub ts ON jt.transactionSubId = ts.id
+        LEFT JOIN transactiontype ty ON ty.id = ts.transactionTypeId
+        WHERE
+            wd.workDiaryId = #{workDiaryId}
+            ORDER BY wd.startTime ASC
+    </select>
+
+    <select id="queryWorkDiarySubByWorkDiary2" resultType="com.magic.ereal.business.entity.WorkDiarySub">
+        SELECT
+            wd.id,wd.jobTypeId,wd.timeTypeId,wd.startTime,wd.endTime,wd.jobContent,wd.createTime,
+            wd.updateTime,wd.workDiaryId,wd.projectId,wd.transactionSubId,
+            CASE wd.transactionSubId WHEN 3  THEN 1 WHEN 4 THEN 1 ELSE ty.id END AS transactionTypeId,
+            IF(wd.transactionSubId = 3,'内部', IF(wd.transactionSubId = 4,'外部',ts.transactionSubName)) AS transactionSubName,
+            CASE wd.transactionSubId WHEN 3  THEN '工作' WHEN 4 THEN '工作' ELSE ty.transactionName END AS transactionTypeName,
+            IF(wd.transactionSubId = 3,
+                    (SELECT shortName FROM project_interior WHERE id=wd.jobTypeId),
+                    IF(wd.transactionSubId = 4,
+                        (SELECT projectNameShort FROM project WHERE id=wd.jobTypeId)
+            ,jt.jobTypeName)) AS jobTypeName
+        FROM
+            work_diary_sub wd
+        LEFT JOIN job_type jt ON wd.jobTypeId = jt.id
+        LEFT JOIN transactionsub ts ON jt.transactionSubId = ts.id
+        LEFT JOIN transactiontype ty ON ty.id = ts.transactionTypeId
+        WHERE
+            wd.workDiaryId = #{workDiaryId}
+            AND wd.transactionSubId NOT IN (7)
+            ORDER BY wd.startTime ASC
+    </select>
+
+    <update id="batchUpdateWorkDiarySub">
+        <foreach collection="workDiarySubs" index="index" item="workDiarySub" separator=";">
+            UPDATE `work_diary_sub`
+            <set>
+                <if test="workDiarySub.transactionSubId != null">
+                    `transactionSubId`=#{workDiarySub.transactionSubId},
+                </if>
+                <if test="workDiarySub.workDiaryId != null">
+                    `workDiaryId`=#{workDiarySub.workDiaryId},
+                </if>
+                <if test="workDiarySub.jobContent != null">
+                    `jobContent`=#{workDiarySub.jobContent},
+                </if>
+                <if test="workDiarySub.createTime != null">
+                    `createTime`=#{workDiarySub.createTime},
+                </if>
+                <if test="workDiarySub.updateTime != null">
+                    `updateTime`=#{workDiarySub.updateTime},
+                </if>
+                <if test="workDiarySub.jobTypeId != null">
+                    `jobTypeId`=#{workDiarySub.jobTypeId},
+                </if>
+                <if test="workDiarySub.startTime != null">
+                    `startTime`=#{workDiarySub.startTime},
+                </if>
+                <if test="workDiarySub.endTime != null">
+                    `endTime`=#{workDiarySub.endTime},
+                </if>
+            </set>
+            WHERE `id`=#{workDiarySub.id}
+        </foreach>
+    </update>
+
+    <delete id="delWorkDiarySub">
+        DELETE FROM `work_diary_sub` WHERE `id`=#{id}
+    </delete>
+
+    <select id="info" resultType="com.magic.ereal.business.entity.WorkDiarySub">
+         SELECT
+            wd.*, ty.transactionName AS transactionTypeName ,
+            ts.transactionSubName AS transactionSubName,
+            jt.jobTypeName AS jobTypeName,
+            ts.id AS transactionSubId
+        FROM
+            work_diary_sub wd
+        LEFT JOIN job_type jt ON wd.jobTypeId = jt.id
+        LEFT JOIN transactionsub ts ON jt.transactionSubId = ts.id
+        LEFT JOIN transactiontype ty ON ty.id = ts.transactionTypeId
+        WHERE wd.id = #{id}
+    </select>
+
+
+
+    <select id="isHave" resultType="com.magic.ereal.business.entity.WorkDiarySub" >
+        SELECT * FROM work_diary_sub wds,work_diary wd
+        WHERE ((wds.endTime > #{startTime} AND <![CDATA[ wds.endTime < #{endTime} ]]>)
+        OR (wds.startTime >= #{startTime}  AND <![CDATA[ wds.startTime < #{endTime} ]]>)
+        OR (<![CDATA[ wds.startTime < #{startTime} ]]> AND  wds.endTime > #{endTime} ))
+        AND wd.userId = #{userId}
+        AND wd.id=wds.workDiaryId
+        AND DATE_FORMAT(wd.workTime,'%Y-%c-%d')=DATE_FORMAT(#{workTime},'%Y-%c-%d')
+        <if test="id != null">
+          AND wds.id not in (#{id})
+        </if>
+    </select>
+
+
+</mapper>

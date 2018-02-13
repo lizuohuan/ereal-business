@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.ICustomAwardsMapper" >
+
+
+    <select id="queryCustomAwardsByType" resultType="com.magic.ereal.business.entity.CustomAwards">
+        SELECT * FROM custom_awards ca WHERE ca.type = #{type} AND ca.isValid = 1
+    </select>
+
+    <select id="queryCustomAwardsList" resultType="com.magic.ereal.business.entity.CustomAwards"  parameterType="map">
+        SELECT ca.* FROM custom_awards ca
+        WHERE 1=1
+        <if test="type != null">
+            AND ca.`type` = #{type}
+        </if>
+        <if test="awardsName != null">
+            AND ca.awardsName LIKE '%${awardsName}%'
+        </if>
+        ORDER BY ca.id DESC
+         <if test="limit != null and limitSize != null">
+             LIMIT #{limit},#{limitSize}
+         </if>
+    </select>
+
+    <select id="countCustomAwardsList" resultType="java.lang.Integer" parameterType="map">
+        SELECT COUNT(0) FROM custom_awards ca
+        WHERE 1=1
+    </select>
+
+    <insert id="addCustomAwards" parameterType="com.magic.ereal.business.entity.CustomAwards">
+        INSERT INTO custom_awards (awardsName, `type`, isValid)
+        VALUES (#{awardsName}, #{type}, 1)
+    </insert>
+
+    <update id="updateCustomAwards">
+        UPDATE custom_awards
+        <set>
+            <if test="customAwards.awardsName != null">
+                awardsName = #{customAwards.awardsName},
+            </if>
+            <if test="customAwards.isValid != null">
+                isValid = #{customAwards.isValid},
+            </if>
+        </set>
+        WHERE id = #{customAwards.id}
+    </update>
+
+
+
+
+</mapper>

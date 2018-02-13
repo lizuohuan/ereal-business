@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IProjectGroupMapper" >
+
+
+    <resultMap id="BaseProjectGroup" type="com.magic.ereal.business.entity.ProjectGroup">
+        <result column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="member" property="member" javaType="java.lang.String"/>
+        <result column="projectName" property="projectName" javaType="java.lang.String"/>
+        <result column="departmentName" property="departmentName" javaType="java.lang.String"/>
+        <result column="userName" property="userName" javaType="java.lang.String"/>
+        <result column="projectManagerId" property="projectManagerId" javaType="java.lang.Integer"/>
+        <result column="departmentId" property="departmentId" javaType="java.lang.Integer"/>
+        <result column="createUserId" property="createUserId" javaType="java.lang.Integer"/>
+        <result column="isValid" property="isValid" javaType="java.lang.Integer"/>
+        <result column="companyId" property="companyId" javaType="java.lang.Integer"/>
+        <result column="createTime" property="createTime" javaType="java.util.Date"/>
+        <result column="updateTime" property="updateTime" javaType="java.util.Date"/>
+    </resultMap>
+
+    <resultMap id="ProjectGroupIncludeUsers" type="com.magic.ereal.business.entity.ProjectGroup" extends="BaseProjectGroup">
+        <association property="members" column="id" select="com.magic.ereal.business.mapper.IProjectGroupUserMapper.queryUserByProjectGroupId"/>
+        <association property="projectManager" column="projectManagerId" select="com.magic.ereal.business.mapper.IUserMapper.queryUserOtherInfo"/>
+    </resultMap>
+
+
+    <select id="queryProjectGroupManagerByDepartmentId" resultMap="BaseProjectGroup">
+        SELECT
+            u.`name` AS userName,
+            pg.projectManagerId
+        FROM
+            users u,
+            project_group pg
+        WHERE
+            u.id = pg.projectManagerId
+            <if test="departmentId != null">
+                AND pg.departmentId = #{departmentId}
+            </if>
+        GROUP BY pg.projectManagerId
+    </select>
+
+    <select id="queryProjectGroupIncludeUsersById" resultMap="ProjectGroupIncludeUsers">
+        SELECT pg.*,d.departmentName AS departmentName
+        FROM `project_group` pg,department d
+        WHERE pg.departmentId = d.id
+        AND pg.`id`=#{id}
+    </select>
+
+    <select id="queryProjectGroupByDepartment" resultMap="ProjectGroupIncludeUsers">
+        SELECT * FROM `project_group`
+        WHERE `departmentId`=#{departmentId} AND `isValid`=1
+    </select>
+
+    <select id="queryProjectGroupByUser" resultMap="BaseProjectGroup">
+        SELECT
+            pg.*
+        FROM
+            project_group pg,
+            users u
+        WHERE
+            u.id = #{userId}
+        AND pg.`isValid`=1
+        AND u.id IN (pg.member)
+    </select>
+    
+    <insert id="addProjectGroup" useGeneratedKeys="true" keyProperty="projectGroup.id">
+        INSERT INTO `project_group` (`member`,`projectManagerId`,`departmentId`,`createTime`,`updateTime`,`createUserId`,
+        `projectName`,`isValid`)
+        VALUES
+        (#{projectGroup.member},#{projectGroup.projectManagerId},#{projectGroup.departmentId}
+        ,now(),now(),#{projectGroup.createUserId},#{projectGroup.projectName},1)
+    </insert>
+
+    <update id="updateProjectGroup">
+        UPDATE `project_group`
+        <set>
+            <if test="projectGroup.isValid != null">
+                `isValid`=#{projectGroup.isValid},
+            </if>
+            <if test="projectGroup.projectName != null">
+                `projectName`=#{projectGroup.projectName},
+            </if>
+            <if test="projectGroup.createUserId != null">
+                `createUserId`=#{projectGroup.createUserId},
+            </if>
+            <if test="projectGroup.departmentId != null">
+                `departmentId`=#{projectGroup.departmentId},
+            </if>
+            <if test="projectGroup.projectManagerId != null">
+                `projectManagerId`=#{projectGroup.projectManagerId},
+            </if>
+            <if test="projectGroup.member != null">
+                `member`=#{projectGroup.member},
+            </if>
+            `updateTime`=now()
+        </set>
+        WHERE `id`=#{projectGroup.id}
+    </update>
+
+    <update id="delProjectGroup">
+        UPDATE `project_group`
+        SET `isValid`= 0
+        WHERE `id`=#{id}
+    </update>
+
+    <select id="list" parameterType="map" resultMap="ProjectGroupIncludeUsers">
+        select pg.*,d.departmentName,d.companyId AS companyId ,cu.name AS createUserName
+        from project_group pg,department d , users cu
+        WHERE d.id = pg.departmentId AND cu.id = pg.createUserId
+        <if test="p.departmentId != null">
+            AND pg.departmentId = #{p.departmentId}
+        </if>
+        <if test="p.projectManagerId != null">
+            AND pg.projectManagerId = #{p.projectManagerId}
+        </if>
+        <if test="p.projectName != null">
+            AND pg.projectName  LIKE '%${p.projectName}%'
+        </if>
+        <if test="p.isValid != null">
+            AND pg.isValid = #{p.isValid}
+        </if>
+        ORDER BY
+        <if test="pageArgs != null">
+            <if test="pageArgs.column != null and pageArgs.column != ''">
+                ${pageArgs.column} ${pageArgs.order},
+            </if>
+        </if>
+        pg.createTime DESC
+        <if test="pageArgs != null">
+            limit #{pageArgs.pageStart}, #{pageArgs.pageSize}
+        </if>
+    </select>
+</mapper>

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.ISecondVeidooMapper">
+
+
+
+
+    <select id="statisticsSecondVeidoo" resultType="java.lang.Double">
+
+      <if test="type == 1">
+          <!-- 项目团队 -->
+
+          <if test="method == 1">
+              <!-- 考核方式一：内部结项数/目标结项数*100%  -->
+              SELECT
+              (
+              (SELECT COUNT(*) FROM project_interior WHERE departmentId=#{departmentId} AND projectStatus=1 AND DATE_FORMAT(overTime,'%Y-%m') = DATE_FORMAT(#{date},'%Y-%m'))
+              +
+              (SELECT COUNT(*) FROM project WHERE departmentId=#{departmentId} AND (`status`=5006 OR `status`=5007 OR `status`=5008) AND DATE_FORMAT(overTime,'%Y-%m') = DATE_FORMAT(#{date},'%Y-%m') )
+              ) / IF( (SELECT targetNum FROM second_target WHERE departmentId=#{departmentId} AND DATE_FORMAT(targetTime,'%Y-%m')= DATE_FORMAT(#{date},'%Y-%m') LIMIT 0,1) IS NULL
+              ,1,(SELECT targetNum FROM second_target WHERE departmentId=#{departmentId} AND DATE_FORMAT(targetTime,'%Y-%m')= DATE_FORMAT(#{date},'%Y-%m') LIMIT 0,1))
+          </if>
+          <if test="method == 2">
+              <!-- （K内+K外）/（1.7*0.7））/目标结项数*100% 业务层计算  -->
+          </if>
+      </if>
+      <if test="type == 2">
+          <!-- 职能部门 -->
+          <if test="method == 1">
+              <!-- 完成任务数（量化的指标）/目标完成数（量化的指标）*100%  -->
+              SELECT
+              (SELECT COUNT(*) FROM second_target WHERE departmentId=#{departmentId} AND DATE_FORMAT(targetTime,'%Y-%m')= DATE_FORMAT(#{date},'%Y-%m') AND isApproved=1 AND method=1)
+              /
+              (SELECT COUNT(*) FROM second_target WHERE departmentId=#{departmentId} AND DATE_FORMAT(targetTime,'%Y-%m')= DATE_FORMAT(#{date},'%Y-%m') AND method=1)
+          </if>
+          <if test="method == 2">
+              <!-- 值总评价分数*0.3+总经理评价分数*0.7 -->
+              SELECT
+              (SELECT dutyGrade FROM second_target WHERE departmentId=#{departmentId} AND DATE_FORMAT(targetTime,'%Y-%m')= DATE_FORMAT(#{date},'%Y-%m') AND method=2)
+              * (SELECT dutyManager / 100 FROM  second_veidoo WHERE type = 2 AND method=2)
+              +
+              (SELECT managerGrade FROM second_target WHERE departmentId=#{departmentId} AND DATE_FORMAT(targetTime,'%Y-%m')= DATE_FORMAT(#{date},'%Y-%m') AND method=2)
+              * (SELECT weightManager / 100 FROM  second_veidoo WHERE type = 2 AND method=2)
+          </if>
+
+      </if>
+
+    </select>
+
+
+    <select id="querySecondVeidooByType" resultType="com.magic.ereal.business.entity.SecondVeidoo">
+        SELECT * FROM `second_veidoo` WHERE `type`=#{type}
+    </select>
+
+
+    <update id="updateSecondVeidoo">
+        UPDATE `second_veidoo`
+        <set>
+            <if test="secondVeidoo.method != null">
+                `method`=#{secondVeidoo.method},
+            </if>
+            <if test="secondVeidoo.weightManager != null">
+                `weightManager`=#{secondVeidoo.weightManager},
+            </if>
+            <if test="secondVeidoo.dutyManager != null">
+                `dutyManager`=#{secondVeidoo.dutyManager},
+            </if>
+        </set>
+        WHERE `id`=#{secondVeidoo.id}
+    </update>
+
+
+
+
+
+
+
+
+
+
+
+
+</mapper>

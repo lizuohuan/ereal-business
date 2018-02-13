@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.ISecondTargetScoreDepartmentMapper">
+
+
+
+    <insert id="addSecondTargetScoreDepartment">
+        INSERT INTO second_target_score_department (dutyGrade, managerGrade, departmentId, startTime, endTime,
+        dutyGradeTime,managerGradeTime)
+        VALUES (#{scoreDepartment.dutyGrade},#{scoreDepartment.managerGrade},#{scoreDepartment.departmentId},
+        #{scoreDepartment.startTime},#{scoreDepartment.endTime},#{scoreDepartment.dutyGradeTime}
+        ,#{scoreDepartment.managerGradeTime})
+    </insert>
+
+    <update id="updateSecondTargetScoreDepartment">
+        UPDATE second_target_score_department
+        <set>
+            <if test="scoreDepartment.managerGradeTime != null">
+                managerGradeTime = #{scoreDepartment.managerGradeTime},
+            </if>
+            <if test="scoreDepartment.dutyGradeTime != null">
+                dutyGradeTime = #{scoreDepartment.dutyGradeTime},
+            </if>
+            <if test="scoreDepartment.dutyGrade != null">
+                dutyGrade = #{scoreDepartment.dutyGrade},
+            </if>
+            <if test="scoreDepartment.managerGrade != null">
+                managerGrade = #{scoreDepartment.managerGrade},
+            </if>
+        </set>
+        WHERE id = #{scoreDepartment.id}
+    </update>
+
+    <select id="queryScoreDepartment" resultType="com.magic.ereal.business.entity.SecondTargetScoreDepartment">
+        SELECT * FROM  second_target_score_department WHERE departmentId = #{departmentId}
+        AND startTime = #{startTime} AND endTime = #{endTime}
+    </select>
+
+    <select id="queryScoreDepartmentByItems" resultType="com.magic.ereal.business.entity.SecondTargetScoreDepartment">
+        SELECT stc.* ,d.departmentName,c.companyName
+        FROM
+        second_target_score_department stc,department d,company c
+        WHERE
+        stc.departmentId = d.id
+        AND d.companyId = c.id
+        <if test="departmentId != null">
+            AND stc.departmentId = #{departmentId}
+        </if>
+        <if test="startTime != null and endTime != null">
+            AND stc.startTime = #{startTime} AND stc.endTime = #{endTime}
+        </if>
+        ORDER BY stc.id DESC
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+
+    </select>
+
+
+    <select id="countScoreDepartmentByItems" resultType="java.lang.Integer">
+        SELECT COUNT(0)
+        FROM
+        second_target_score_department stc,department d,company c
+        WHERE
+        stc.departmentId = d.id
+        AND d.companyId = c.id
+        <if test="departmentId != null">
+            AND stc.departmentId = #{departmentId}
+        </if>
+        <if test="startTime != null and endTime != null">
+            AND stc.startTime = #{startTime} AND stc.endTime = #{endTime}
+        </if>
+    </select>
+
+
+
+
+
+
+
+
+
+
+
+
+</mapper>

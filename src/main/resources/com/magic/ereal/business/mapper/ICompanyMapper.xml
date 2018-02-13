@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.ICompanyMapper" >
+
+
+    <resultMap id="BaseCompany" type="com.magic.ereal.business.entity.Company">
+        <result column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="companyName" property="companyName" javaType="java.lang.String"/>
+        <result column="type" property="type" javaType="java.lang.Integer"/>
+        <result column="isValid" property="isValid" javaType="java.lang.Integer"/>
+        <result column="createTime" property="createTime" javaType="java.util.Date"/>
+    </resultMap>
+    <!-- 包含部门的联合查询 -->
+    <resultMap id="CompanyIncludeDepartment" type="com.magic.ereal.business.entity.Company" extends="BaseCompany">
+        <association property="departments" column="{companyId=id,accreditType=accreditType,userId=userId}" select="com.magic.ereal.business.mapper.IDepartmentMapper.queryDepartmentByCompanyId"/>
+    </resultMap>
+
+    <resultMap id="IncludeUser" type="com.magic.ereal.business.entity.Company" extends="BaseCompany">
+        <association property="users" column="{time=time,companyId=id}" select="com.magic.ereal.business.mapper.IUserMapper.staticsBirthday"/>
+        <association property="performanceEmployees" column="id" select="com.magic.ereal.business.mapper.IUserMapper.queryPerformanceEmployees"/>
+    </resultMap>
+
+
+
+    <select id="staticsBirthday" resultMap="IncludeUser">
+      SELECT c.*,#{time} AS `time` FROM company c
+    </select>
+
+
+
+    <select id="queryBaseCompany" resultMap="BaseCompany">
+        SELECT * FROM `company`
+    </select>
+
+
+
+
+    <select id="queryAllCompany" resultMap="CompanyIncludeDepartment">
+        SELECT *,#{accreditType} AS accreditType,#{userId} AS userId FROM `company`
+    </select>
+
+    <insert id="addCompany">
+      INSERT INTO `company` (`companyName`,`type`,`createTime`,isValid)
+      VALUES
+      (#{company.companyName},#{company.type},NOW(),1)
+    </insert>
+
+    <delete id="delCompany">
+        DELETE FROM `company` WHERE id=#{id}
+    </delete>
+
+    <update id="updateCompany">
+        UPDATE `company`
+        <set>
+            <if test="company.companyName != null">
+                `companyName`=#{company.companyName},
+            </if>
+            <if test="company.isValid != null">
+                `isValid`=#{company.isValid},
+            </if>
+        </set>
+        WHERE `id`=#{company.id}
+    </update>
+
+    <select id="queryCompanyById" resultMap="CompanyIncludeDepartment">
+      SELECT `id`,`companyName`,`type`,`createTime`,#{accreditType} AS accreditType,#{userId} AS userId
+      FROM `company`
+      WHERE `id`=#{id}
+    </select>
+
+    <!--公司列表-->
+    <select id="listForWeb" resultMap="BaseCompany">
+      SELECT  * FROM company WHERE isValid = 1
+    </select>
+</mapper>

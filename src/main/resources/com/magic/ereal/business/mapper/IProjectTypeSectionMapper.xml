@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IProjectTypeSectionMapper" >
+
+    <resultMap id="BaseProjectTypeSection" type="com.magic.ereal.business.entity.ProjectTypeSection">
+        <result column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="projectTypeId" property="projectTypeId" javaType="java.lang.Integer"/>
+        <result column="sectionDays" property="sectionDays" javaType="java.lang.Double"/>
+        <result column="sectionName" property="sectionName" javaType="java.lang.String"/>
+        <result column="sectionDescribe" property="sectionDescribe" javaType="java.lang.String"/>
+        <result column="sectionNum" property="sectionNum" javaType="java.lang.Integer"/>
+    </resultMap>
+
+
+    <select id="queryProjectTypeSectionByType" resultMap="BaseProjectTypeSection">
+        SELECT * FROM `project_type_section` WHERE `projectTypeId`=#{projectTypeId} ORDER BY sectionNum ASC
+    </select>
+
+    <insert id="addProjectTypeSection" useGeneratedKeys="true" keyProperty="section.id">
+        INSERT INTO `project_type_section`
+        (`projectTypeId`,`sectionName`,`sectionDescribe`,`sectionDays`,`sectionNum`)
+        VALUES
+        (#{section.projectTypeId},#{section.sectionName},#{section.sectionDescribe},#{section.sectionDays},#{section.sectionNum})
+    </insert>
+
+    <update id="updateProjectTypeSection">
+        UPDATE `project_type_section`
+        <set>
+            <if test="section.sectionDescribe != null">
+                `sectionDescribe`=#{section.sectionDescribe},
+            </if>
+            <if test="section.sectionName != null">
+                `sectionName`=#{section.sectionName},
+            </if>
+            <if test="section.sectionDays != null">
+                `sectionDays`=#{section.sectionDays},
+            </if>
+            <if test="section.projectTypeId != null">
+                `projectTypeId`=#{section.projectTypeId},
+            </if>
+        </set>
+        WHERE `id`=#{section.id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM project_type_section WHERE projectTypeId = #{projectTypeId}
+    </delete>
+
+
+    <select id="getByProjectId" resultMap="BaseProjectTypeSection">
+        select * from project_type_section pts ,project p
+        WHERE
+        pts.projectTypeId = p.projectTypeId AND
+        p.id = #{projectId}
+
+    </select>
+</mapper>

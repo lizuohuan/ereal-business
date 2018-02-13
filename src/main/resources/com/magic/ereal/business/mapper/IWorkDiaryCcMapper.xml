@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IWorkDiaryCcMapper" >
+
+    <resultMap id="BaseWorkDiaryCc" type="com.magic.ereal.business.entity.WorkDiaryCc" extends="com.magic.ereal.business.mapper.IUserMapper.BaseResultMap">
+        <result column="id" property="workDiaryCcId" javaType="java.lang.Integer"/>
+        <result column="work_diary_id" property="workDiaryId" javaType="java.lang.Integer"/>
+        <result column="userId" property="userId" javaType="java.lang.Integer"/>
+        <result column="createTime" property="createTime" javaType="java.util.Date"/>
+        <result column="updateTime" property="updateTime" javaType="java.util.Date"/>
+    </resultMap>
+
+    <!-- 批量添加抄送人 -->
+    <insert id="save" >
+        INSERT INTO `work_diary_cc` (`work_diary_id`, `user_id`, `createTime`, `updateTime`)
+        VALUES
+        <foreach collection="list" item="workDiaryCc" index="index" separator=",">
+          (#{workDiaryCc.workDiaryId}, #{workDiaryCc.userId}, now(), now())
+        </foreach>
+    </insert>
+    <!--抄送人集合-->
+    <select id="list" resultMap="BaseWorkDiaryCc">
+      SELECT w.id AS workDiaryCcId, u.id,u.`name`,u.avatar,u.token,u.department_id,
+       u.deviceToken,u.deviceType FROM work_diary_cc w,users u
+      WHERE
+        w.user_id = u.id AND
+        w.work_diary_id = #{workDiaryId}
+    </select>
+</mapper>

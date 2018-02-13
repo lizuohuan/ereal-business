@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.ITransactionSubMapper">
+
+    <resultMap id="BaseTransactionSub" type="com.magic.ereal.business.entity.TransactionSub">
+        <result column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="transactionSubName" property="transactionSubName" javaType="java.lang.String"/>
+        <result column="transactionTypeId" property="transactionTypeId" javaType="java.lang.Integer"/>
+        <result column="isShow" property="isShow" javaType="java.lang.Integer"/>
+        <result column="isUpdate" property="isUpdate" javaType="java.lang.Integer"/>
+    </resultMap>
+
+    <resultMap id="TransactionSub" type="com.magic.ereal.business.entity.TransactionSub" extends="BaseTransactionSub">
+        <association property="jobTypes" column="{userId=userId,transaction=id}" select="com.magic.ereal.business.mapper.IJobTypeMapper.queryJobTypeByTransactionMap"/>
+    </resultMap>
+
+
+    
+    <select id="queryAllTransactionSub" resultMap="TransactionSub">
+        SELECT ts.*,tt.transactionName AS transactionTypeName,
+         #{userId} AS userId  FROM
+        `transactionsub` ts ,transactiontype tt
+        WHERE ts.transactionTypeId = tt.id
+        AND ts.`isShow`=1
+    </select>
+
+
+    <select id="queryTransactionSubByItem" resultType="com.magic.ereal.business.entity.TransactionSub">
+        SELECT ts.*,tt.transactionName AS transactionTypeName FROM
+        `transactionsub` ts ,transactiontype tt
+        WHERE ts.transactionTypeId = tt.id
+        <if test="isShow != null">
+            AND ts.`isShow`=#{isShow}
+        </if>
+    </select>
+
+    <insert id="addTransactionSub" useGeneratedKeys="true" keyProperty="transactionSub.id">
+        INSERT INTO `transactionsub`
+        (`transactionSubName`,`transactionTypeId`,`isShow`,`isUpdate`)
+        VALUES
+        (#{transactionSub.transactionSubName},#{transactionSub.transactionTypeId},1,1)
+    </insert>
+
+    <update id="updateTransactionSub">
+        UPDATE `transactionsub`
+        <set>
+            <if test="transactionSub.isShow != null">
+                `isShow`=#{transactionSub.isShow},
+            </if>
+            <if test="transactionSub.transactionSubName != null">
+                `transactionSubName`=#{transactionSub.transactionSubName},
+            </if>
+        </set>
+        WHERE `id`=#{transactionSub.id}
+    </update>
+
+
+</mapper>

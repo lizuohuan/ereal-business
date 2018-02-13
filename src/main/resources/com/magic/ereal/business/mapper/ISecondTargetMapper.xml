@@ -1,0 +1,569 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.ISecondTargetMapper">
+
+
+    <select id="querySecondTargetByItem" resultType="com.magic.ereal.business.entity.SecondTarget">
+      SELECT * FROM second_target s WHERE
+      s.departmentId=#{departmentId}
+      AND s.startTime = #{startTime} AND s.endTime =#{endTime}
+    </select>
+
+
+    <select id="countSecondTargetByCompanyId" resultType="java.lang.Integer">
+        SELECT
+            IF(
+                (SELECT COUNT(*) FROM department WHERE companyId = #{companyId}) =
+                (
+                SELECT
+                    COUNT(*)
+                FROM
+                    (
+                        SELECT
+                            COUNT(0)
+                        FROM
+                            second_target s,
+                            department d
+                        WHERE
+                            s.departmentId = d.id
+                        AND d.companyId = #{companyId}
+                        AND s.startTime = #{startTime}
+                        AND s.endTime = #{endTime}
+                        GROUP BY d.id
+                    ) AS num
+                ),
+             1,0
+            )
+    </select>
+
+
+    <select id="querySecondTarget" resultType="com.magic.ereal.business.entity.SecondTarget">
+        SELECT st.*,u.name AS userName ,d.departmentName AS departmentName,
+        d.isProjectDepartment AS isProjectDepartment,
+        st.score AS score,
+        d.companyId AS companyId,cc.companyName AS companyName
+        FROM second_target st LEFT JOIN  users u ON u.id=st.createUserId
+        LEFT JOIN  department d ON st.departmentId = d.id LEFT JOIN users uu ON uu.department_id = d.id
+        LEFT JOIN  company cc ON d.companyId = cc.id
+        LEFT JOIN role r ON uu.role_id = r.id
+        WHERE 1=1
+        <if test="isProjectDepartment != null">
+            <!-- 如果是查询职能部门 -->
+            AND d.isProjectDepartment = #{isProjectDepartment}
+        </if>
+        <if test="departmentId != null">
+            AND st.departmentId=#{departmentId}
+        </if>
+        <if test="startTime != null and endTime != null">
+            AND st.startTime = #{startTime} AND st.endTime = #{endTime}
+        </if>
+        <if test="isScore == 0">
+            <!-- 不是打分列表 -->
+            AND st.targetMsg IS NOT NULL
+        </if>
+        <if test="isScore == 1">
+            <!-- 是打分列表 -->
+            AND (st.dutyGrade IS NOT NULL OR st.managerGrade IS NOT NULL)
+        </if>
+        GROUP BY st.id
+        ORDER BY st.id DESC
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+
+    </select>
+
+    <select id="countQuerySecondTarget" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT st.id) FROM second_target st LEFT JOIN  users u ON u.id=st.createUserId
+        LEFT JOIN  department d ON st.departmentId = d.id LEFT JOIN users uu ON uu.department_id = d.id
+        LEFT JOIN role r ON uu.role_id = r.id
+        WHERE 1=1
+        <if test="isProjectDepartment != null">
+            AND d.isProjectDepartment = #{isProjectDepartment}
+        </if>
+
+        <if test="departmentId != null">
+            AND st.departmentId=#{departmentId}
+        </if>
+        <if test="startTime != null and endTime != null">
+            AND st.startTime = #{startTime} AND st.endTime = #{endTime}
+        </if>
+        <if test="isScore == 0">
+            <!-- 不是打分列表 -->
+            AND st.targetMsg IS NOT NULL
+        </if>
+        <if test="isScore == 1">
+            <!-- 是打分列表 -->
+            AND (st.dutyGrade IS NOT NULL OR st.managerGrade IS NOT NULL)
+        </if>
+
+    </select>
+
+
+
+
+    <insert id="addSecondTarget">
+        INSERT INTO `second_target` (departmentId,targetName,targetMsg,targetWeight,targetTime,createTime,createUserId,method,
+        startTime,endTime,managerGrade,dutyGrade,targetNum)
+        VALUES
+        (#{secondTarget.departmentId},#{secondTarget.targetName},#{secondTarget.targetMsg}
+        ,#{secondTarget.targetWeight},#{secondTarget.targetTime},NOW(),#{secondTarget.createUserId},#{secondTarget.method},
+        #{secondTarget.startTime},#{secondTarget.endTime},#{secondTarget.managerGrade},#{secondTarget.dutyGrade}
+        ,#{secondTarget.targetNum})
+    </insert>
+
+    <update id="updateSecondTarget">
+        UPDATE `second_target`
+        <set>
+            <if test="secondTarget.scoreTime != null">
+                `scoreTime`=#{secondTarget.scoreTime},
+            </if>
+            <if test="secondTarget.approvedTime != null">
+                `approvedTime`=#{secondTarget.approvedTime},
+            </if>
+            <if test="secondTarget.score != null">
+                `score`=#{secondTarget.score},
+            </if>
+            <if test="secondTarget.targetNum != null">
+                `targetNum`=#{secondTarget.targetNum},
+            </if>
+            <if test="secondTarget.managerGrade != null">
+                `managerGrade`=#{secondTarget.managerGrade},
+            </if>
+            <if test="secondTarget.dutyGrade != null">
+                `dutyGrade`=#{secondTarget.dutyGrade},
+            </if>
+            <if test="secondTarget.method != null">
+                `method`=#{secondTarget.method},
+            </if>
+            <if test="secondTarget.isApproved != null">
+                `isApproved`=#{secondTarget.isApproved},
+            </if>
+            <if test="secondTarget.departmentId != null">
+                `departmentId`=#{secondTarget.departmentId},
+            </if>
+            <if test="secondTarget.targetName != null">
+                `targetName`=#{secondTarget.targetName},
+            </if>
+            <if test="secondTarget.targetMsg != null">
+                `targetMsg`=#{secondTarget.targetMsg},
+            </if>
+            <if test="secondTarget.targetWeight != null">
+                `targetWeight`=#{secondTarget.targetWeight},
+            </if>
+            <if test="secondTarget.targetTime != null">
+                `targetTime`=#{secondTarget.targetTime},
+            </if>
+        </set>
+        WHERE `id`=#{secondTarget.id}
+    </update>
+
+
+    <delete id="delSecondTarget">
+        DELETE FROM `second_target` WHERE `id`=#{id}
+    </delete>
+
+
+
+
+    <select id="listForWeb" resultType="com.magic.ereal.business.entity.TwoStatistics" >
+
+        SELECT
+        d.departmentName ,u.`name` AS userName ,c.companyName, u.id AS userId,c.id AS companyId,d.id AS departmentId,
+        (
+        IF((SELECT sp_isProjectDepartment(u.id,#{startTime})) =
+        1,
+        -- 如果是项目部
+        IFNULL(
+        (
+        SELECT
+        CASE
+        WHEN sv.method = 1 THEN
+        (
+        ((SELECT COUNT(*) FROM project p WHERE p.`status` IN (5006,5007,5008) AND
+        (p.bTeacherId = u.id OR projectGroupId IN (SELECT pgu.projectGroupId FROM project_group_user pgu WHERE
+        pgu.userId = u.id ))
+        AND p.overTime BETWEEN #{startTime} AND #{endTime})
+        /
+        IFNULL((SELECT SUM(IFNULL(targetNum,1)) FROM second_target WHERE departmentId = d.id AND startTime=
+        #{monthStartTime} AND endTime = #{monthEndTime}),1)) * 100
+        )
+
+        WHEN sv.method = 2 THEN
+        (
+        (
+        IFNULL((SELECT SUM(IFNULL(pk.k,0)) FROM project_interior_week_k_allocation pk WHERE pk.userId = u.id AND
+        pk.createTime BETWEEN #{startTime} AND #{endTime}),0)
+        +
+        sp_project_kw(u.id,#{startTime},#{endTime})) / (1.7 * 0.7) /
+        (SELECT SUM(IFNULL(targetNum,0)) FROM second_target WHERE departmentId = d.id AND startTime= #{monthStartTime}
+        AND endTime = #{monthEndTime})
+
+        ) * 100
+
+        WHEN sv.method = 3 THEN
+        (
+        ((SELECT COUNT(*) FROM project p WHERE p.`status` IN (5006,5007) AND
+        (p.bTeacherId = u.id OR projectGroupId IN (SELECT pgu.projectGroupId FROM project_group_user pgu WHERE
+        pgu.userId = u.id ))
+        AND p.overTime BETWEEN #{startTime} AND #{endTime})
+        /
+        IFNULL((SELECT SUM(IFNULL(targetNum,1)) FROM second_target WHERE departmentId = d.id AND startTime=
+        #{monthStartTime} AND endTime = #{monthEndTime}),1)) * 100
+        )
+
+        WHEN sv.method = 4 THEN
+
+        ((SELECT COUNT(*) FROM project p WHERE p.`status` IN (5008) AND
+        (p.bTeacherId = u.id OR projectGroupId IN (SELECT pgu.projectGroupId FROM project_group_user pgu WHERE
+        pgu.userId = u.id ))
+        AND p.exteriorOverTime BETWEEN #{startTime} AND #{endTime})
+        /
+        IFNULL((SELECT SUM(IFNULL(targetNum,1)) FROM second_target WHERE departmentId = d.id AND startTime=
+        #{monthStartTime} AND endTime = #{monthEndTime}),1)) * 100
+
+        ELSE 0
+        END
+        FROM
+        second_veidoo sv
+        WHERE
+        sv.type = 1
+        )
+        ,0)
+        ,
+        -- 如果是职能部门
+        IFNULL(
+        (
+        SELECT
+        CASE
+        WHEN sd.method = 1 THEN
+
+        (
+        ((SELECT COUNT(*) FROM second_target
+        WHERE departmentId = sd.departmentId AND isApproved = 1 AND approvedTime BETWEEN #{startTime} AND #{endTime}
+        AND startTime= #{monthStartTime} AND endTime = #{monthEndTime})
+        /
+        (SELECT COUNT(*) FROM second_target WHERE departmentId = sd.departmentId AND startTime= #{monthStartTime} AND
+        endTime = #{monthEndTime})) * 100
+        )
+
+        WHEN sd.method = 2 THEN
+
+        (
+        IFNULL((SELECT IFNULL(dutyGrade,0) FROM second_target_score_department
+        WHERE departmentId = sd.departmentId AND startTime= #{monthStartTime} AND endTime = #{monthEndTime}
+        AND dutyGradeTime BETWEEN #{startTime} AND #{endTime}),0)
+        * (SELECT dutyManager / 100 FROM second_veidoo WHERE type = 2)
+        +
+        IFNULL((SELECT IFNULL(managerGrade,0) FROM second_target_score_department WHERE departmentId = sd.departmentId
+        AND startTime= #{monthStartTime} AND endTime = #{monthEndTime}
+        AND managerGradeTime BETWEEN #{startTime} AND #{endTime}),0)
+        * (SELECT weightManager / 100 FROM second_veidoo WHERE type = 2)
+        )
+
+        WHEN sd.method = 3 THEN
+        (
+        IFNULL((SELECT SUM(st.score * (st.targetWeight / 100)) FROM second_target st
+        WHERE st.departmentId = sd.departmentId AND st.startTime= #{monthStartTime}
+        AND st.endTime = #{monthEndTime} AND st.scoreTime BETWEEN #{startTime} AND #{endTime})
+        ,0)
+        )
+        ELSE 0
+        END
+        FROM
+        second_veidoo_department sd
+        WHERE
+        sd.departmentId = d.id
+
+        )
+
+        ,0)
+        )
+        ) AS `schedule`,
+
+
+        (
+        IF((SELECT sp_isProjectDepartment(u.id,#{startTime})) =
+        1,
+        -- 如果是项目部
+        IFNULL(
+        (
+        SELECT
+        CASE
+        WHEN sv.method = 1 THEN
+        (
+
+        IFNULL((SELECT SUM(IFNULL(targetNum,1)) FROM second_target WHERE departmentId = d.id AND startTime=
+        #{monthStartTime} AND endTime = #{monthEndTime}),1)
+        )
+
+        WHEN sv.method = 2 THEN
+        (
+        SELECT SUM(IFNULL(targetNum,0)) FROM second_target WHERE departmentId = d.id AND startTime= #{monthStartTime}
+        AND endTime = #{monthEndTime}
+        )
+
+        WHEN sv.method = 3 THEN
+        (
+        IFNULL((SELECT SUM(IFNULL(targetNum,1)) FROM second_target WHERE departmentId = d.id AND startTime=
+        #{monthStartTime} AND endTime = #{monthEndTime}),1)
+        )
+
+        WHEN sv.method = 4 THEN
+
+
+        IFNULL((SELECT SUM(IFNULL(targetNum,1)) FROM second_target WHERE departmentId = d.id AND startTime=
+        #{monthStartTime} AND endTime = #{monthEndTime}),1)
+
+        ELSE 0
+        END
+        FROM
+        second_veidoo sv
+        WHERE
+        sv.type = 1
+        )
+        ,0)
+        ,
+        -- 如果是职能部门
+        IFNULL(
+        (
+        SELECT
+        CASE
+        WHEN sd.method = 1 THEN
+
+
+        (
+        (SELECT COUNT(*) FROM second_target WHERE departmentId = sd.departmentId AND startTime= #{monthStartTime} AND
+        endTime = #{monthEndTime}))
+
+
+        WHEN sd.method = 2 THEN
+
+        null
+
+        WHEN sd.method = 3 THEN
+        null
+        ELSE null
+        END
+        FROM
+        second_veidoo_department sd
+        WHERE
+        sd.departmentId = d.id
+
+        )
+
+        ,0)
+        )
+        ) AS `targetNum`,
+
+
+        (
+        IF((SELECT sp_isProjectDepartment(u.id,#{startTime})) =
+        1,
+        -- 如果是项目部
+        IFNULL(
+        (
+        SELECT
+        CASE
+        WHEN sv.method = 1 THEN
+        (
+        ((SELECT COUNT(0) FROM project p WHERE p.`status` IN (5006,5007,5008) AND
+        (p.bTeacherId = u.id OR projectGroupId IN (SELECT pgu.projectGroupId FROM project_group_user pgu WHERE
+        pgu.userId = u.id ))
+        AND p.overTime BETWEEN #{startTime} AND #{endTime})
+        )
+        )
+
+        WHEN sv.method = 2 THEN
+        (
+        (
+        IFNULL((SELECT SUM(IFNULL(pk.k,0)) FROM project_interior_week_k_allocation pk WHERE pk.userId = u.id AND
+        pk.createTime BETWEEN #{startTime} AND #{endTime}),0)
+        +
+        sp_project_kw(u.id,#{startTime},#{endTime})) / (1.7 * 0.7)
+        )
+
+        WHEN sv.method = 3 THEN
+        (
+        ((SELECT COUNT(0) FROM project p WHERE p.`status` IN (5006,5007) AND
+        (p.bTeacherId = u.id OR projectGroupId IN (SELECT pgu.projectGroupId FROM project_group_user pgu WHERE
+        pgu.userId = u.id ))
+        AND p.overTime BETWEEN #{startTime} AND #{endTime})
+        )
+        )
+
+        WHEN sv.method = 4 THEN
+
+        ((SELECT COUNT(*) FROM project p WHERE p.`status` IN (5008) AND
+        (p.bTeacherId = u.id OR projectGroupId IN (SELECT pgu.projectGroupId FROM project_group_user pgu WHERE
+        pgu.userId = u.id ))
+        AND p.exteriorOverTime BETWEEN #{startTime} AND #{endTime})
+        )
+
+        ELSE 0
+        END
+        FROM
+        second_veidoo sv
+        WHERE
+        sv.type = 1
+        )
+        ,0)
+        ,
+        -- 如果是职能部门
+        IFNULL(
+        (
+        SELECT
+        CASE
+        WHEN sd.method = 1 THEN
+
+        (
+        ((SELECT COUNT(*) FROM second_target
+        WHERE departmentId = sd.departmentId AND isApproved = 1 AND approvedTime BETWEEN #{startTime} AND #{endTime}
+        AND startTime= #{monthStartTime} AND endTime = #{monthEndTime})
+        )
+        )
+
+        WHEN sd.method = 2 THEN
+
+        (
+        null
+        )
+
+        WHEN sd.method = 3 THEN
+        (
+        null
+        )
+        ELSE null
+        END
+        FROM
+        second_veidoo_department sd
+        WHERE
+        sd.departmentId = d.id
+
+        )
+
+        ,0)
+        )
+        ) AS `actualNum`
+        FROM
+        users u,
+        department d,
+        company c
+        WHERE u.department_id = d.id
+        AND u.role_id NOT IN (1)
+        AND u.Incumbency NOT IN (3)
+        AND c.id = d.companyId
+        AND u.department_id NOT IN (select us.departmentId from users_statistics us where
+        us.startTime = #{startTime} AND us.endTime = #{endTime} AND us.rwcl is not NULL)
+        AND u.id not in(select us.userId from users_statistics us where
+        us.startTime = #{startTime} AND us.endTime = #{endTime} AND us.rwcl is not NULL)
+        <if test="type == 0 and userId != null">
+            AND u.id = #{userId}
+        </if>
+        <if test="type == 1 and departmentId != null">
+            AND u.department_id = #{departmentId}
+        </if>
+        <if test="type == 2 and companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        group by
+        <if test="groupType == 0">
+            u.id
+        </if>
+        <if test="groupType == 1">
+            d.id
+        </if>
+        <if test="groupType == 2">
+            c.id
+        </if>
+        ORDER BY d.id
+        <if test="pageArgs != null">
+            limit #{pageArgs.pageStart}, #{pageArgs.pageSize}
+        </if>
+    </select>
+
+
+    <select id="listForWebCount" resultType="object" >
+        select * from second_target st , department d,company c ,users u
+        WHERE st.departmentId = d.id
+        AND u.department_id = d.id
+        AND u.role_id NOT IN (1)
+        AND u.Incumbency NOT IN (3)
+        AND d.companyId = c.id
+        AND u.department_id NOT IN (select us.departmentId from users_statistics us where
+        us.startTime = #{startTime} AND us.endTime = #{endTime} AND us.rwcl is not NULL)
+        AND u.id not in(select us.userId from users_statistics us where
+        us.startTime = #{startTime} AND us.endTime = #{endTime} AND us.rwcl is not NULL)
+        <if test="type == 0 and userId != null">
+            AND u.id = #{userId}
+        </if>
+        <if test="type == 1 and departmentId != null">
+            AND u.department_id = #{departmentId}
+        </if>
+        <if test="type == 2 and companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        group by
+        <if test="groupType == 0">
+            u.id
+        </if>
+        <if test="groupType == 1">
+            d.id
+        </if>
+    </select>
+
+
+
+
+
+    <select id="listForWebThree" resultType="com.magic.ereal.business.entity.TwoStatistics" >
+
+        SELECT
+            d.departmentName ,u.`name` AS userName ,c.companyName, u.id AS userId,c.id AS companyId,d.id AS departmentId,
+            (
+                IFNULL(
+                SUM(
+                  (SELECT score * (st.targetWeight / 100) FROM second_target_score stc,second_target st
+                  WHERE st.departmentId = d.id AND stc.secondTargetId = st.id AND  st.startTime= #{startTime}
+                    AND st.endTime = #{endTime}  )
+                )
+                ,0)
+            ) AS `schedule`
+        FROM
+            users u,
+            department d,
+            company c
+        WHERE u.department_id = d.id
+        AND c.id = d.companyId
+        AND u.role_id NOT IN (1)
+        AND u.Incumbency NOT IN (3)
+        AND u.department_id NOT IN (select us.departmentId from users_statistics us where
+        us.startTime = #{startTime} AND us.endTime = #{endTime} AND us.rwcl is not NULL)
+        AND u.id not in(select us.userId from users_statistics us where
+        us.startTime = #{startTime} AND us.endTime = #{endTime} AND us.rwcl is not NULL)
+        <if test="type == 0 and userId != null">
+            AND u.id = #{userId}
+        </if>
+        <if test="type == 1 and departmentId != null">
+            AND u.department_id = #{departmentId}
+        </if>
+        <if test="type == 2 and companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        group by
+        <if test="groupType == 0">
+            u.id
+        </if>
+        <if test="groupType == 1">
+            d.id
+        </if>
+        <if test="groupType == 2">
+            c.id
+        </if>
+        <if test="pageArgs != null">
+            limit #{pageArgs.pageStart}, #{pageArgs.pageSize}
+        </if>
+    </select>
+
+
+</mapper>

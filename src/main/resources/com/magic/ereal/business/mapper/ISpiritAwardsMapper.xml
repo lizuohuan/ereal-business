@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.ISpiritAwardsMapper" >
+
+
+
+    <insert id="addSpiritAwards">
+        INSERT INTO `spirit_awards` (`userId`,`month`,`createTime`,`createUserId`,`type`)
+        VALUES
+        (#{spiritAwards.userId},#{spiritAwards.month},NOW(),#{spiritAwards.createUserId},#{spiritAwards.type})
+    </insert>
+
+
+    <insert id="batchAddSpiritAwards">
+        INSERT INTO `spirit_awards` (`userId`,`month`,`createTime`,`createUserId`,`type`)
+        VALUES
+        <foreach collection="spiritAwardss" item="spiritAwards" separator=",">
+            (#{spiritAwards.userId},#{spiritAwards.month},NOW(),#{spiritAwards.createUserId},#{spiritAwards.type})
+        </foreach>
+    </insert>
+
+
+    <select id="querySpiritAwardsByItems" resultType="com.magic.ereal.business.entity.SpiritAwards">
+        SELECT sa.*,u.`name` AS userName, us.`name` as createUserName FROM spirit_awards sa, users u,users us
+        WHERE  sa.userId = u.id and sa.createUserId = us.id
+        <if test="month != null">
+            AND DATE_FORMAT(sa.`month`,'%Y-%m') = DATE_FORMAT(#{month},'%Y-%m')
+        </if>
+        <if test="type != null">
+            AND sa.`type` = #{type}
+        </if>
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+    </select>
+
+
+    <select id="countSpiritAwardsByItems" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM spirit_awards sa, users u
+        WHERE  sa.userId = u.id
+        <if test="month != null">
+            AND DATE_FORMAT(sa.`month`,'%Y-%m') = DATE_FORMAT(#{month},'%Y-%m')
+        </if>
+        <if test="type != null">
+            AND sa.`type` = #{type}
+        </if>
+    </select>
+
+    <select id="querySpiritAwards" resultType="com.magic.ereal.business.entity.Awards">
+        SELECT
+        IF (
+            type = 0,
+            '一真精神奖',
+            IF(type = 1,
+              '优秀执委奖',
+              '月度K王'
+            )
+        ) AS awardsName,
+         `month` AS `time`
+        FROM
+            spirit_awards
+        WHERE
+            userId = #{userId}
+    </select>
+
+    <select id="querySpiritAwardsByUser" resultType="com.magic.ereal.business.entity.SpiritAwards">
+
+        SELECT *
+        FROM spirit_awards
+        WHERE
+        userId = #{userId}
+        AND DATE_FORMAT(`month`,'%Y-%m') = DATE_FORMAT(#{month},'%Y-%m')
+        AND `type` = #{type}
+    </select>
+
+</mapper>

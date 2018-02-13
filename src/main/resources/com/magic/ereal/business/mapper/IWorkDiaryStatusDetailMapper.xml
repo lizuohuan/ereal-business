@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IWorkDiaryStatusDetailMapper" >
+
+
+
+    <insert id="addWorkDiaryStatusDetail">
+        INSERT INTO `work_diary_status_deatial`
+        (`userId`,`notes`,`statusDescribe`,`createTime`,`workDiaryId`)
+        VALUES
+        (#{detail.userId},#{detail.notes},#{detail.statusDescribe},now(),#{detail.workDiaryId})
+    </insert>
+
+    <insert id="batchAddWorkDiaryStatusDetail">
+        INSERT INTO `work_diary_status_deatial`
+        (`userId`,`notes`,`statusDescribe`,`createTime`,`workDiaryId`)
+        VALUES
+        <foreach collection="details" index="index" item="detail" separator=",">
+            (#{detail.userId},#{detail.notes},#{detail.statusDescribe},#{detail.createTime},#{detail.workDiaryId})
+        </foreach>
+    </insert>
+
+    <select id="queryByWorkDiary" resultType="com.magic.ereal.business.entity.WorkDiaryStatusDetail">
+        SELECT
+            wdsd.id,wdsd.userId,wdsd.notes,wdsd.statusDescribe,wdsd.createTime,wdsd.workDiaryId,
+            u.avatar AS avatar,
+            u.`name` AS userName,
+            r.role_name AS roleName,
+            d.departmentName AS departmentName,
+            r.id AS roleId
+        FROM
+            work_diary_status_deatial wdsd,
+            users u,
+            role r,
+            department d
+        WHERE
+            wdsd.userId = u.id
+        AND r.id = u.role_id
+        AND d.id=u.department_id
+        AND wdsd.workDiaryId=#{workDiaryId}
+        ORDER BY wdsd.id DESC
+    </select>
+
+</mapper>

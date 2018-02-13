@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IProjectTypeMapper" >
+
+    <resultMap id="BaseProjectType" type="com.magic.ereal.business.entity.ProjectType">
+        <result column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="isShow" property="isShow" javaType="java.lang.Integer"/>
+        <result column="projectTypeName" property="projectTypeName" javaType="java.lang.String"/>
+    </resultMap>
+
+    <!-- 包含 阶段数据集合 -->
+    <resultMap id="ProjectTypeIncludeSection" type="com.magic.ereal.business.entity.ProjectType" extends="BaseProjectType">
+        <association property="sections" column="id" select="com.magic.ereal.business.mapper.IProjectTypeSectionMapper.queryProjectTypeSectionByType"/>
+    </resultMap>
+
+
+    <select id="queryAllType" resultMap="BaseProjectType">
+        SELECT pt.id,pt.projectTypeName FROM project_type pt
+        WHERE
+        pt.isShow =1
+        AND (SELECT COUNT(*) FROM project_type_section WHERE projectTypeId=pt.id)=4
+    </select>
+
+    <select id="queryProjectTypeById" resultMap="ProjectTypeIncludeSection">
+      SELECT
+        *
+      FROM
+       `project_type`
+      WHERE
+        `id`=#{id}
+    </select>
+
+    <select id="queryProjectType" resultMap="ProjectTypeIncludeSection">
+      SELECT
+        *
+      FROM
+       `project_type`
+      WHERE
+        1=1
+        <if test="isShow != null">
+            AND `isShow`=#{isShow}
+        </if>
+        ORDER BY id DESC
+        <if test="pageArgs != null">
+            limit #{pageArgs.pageStart}, #{pageArgs.pageSize}
+        </if>
+
+    </select>
+
+    <insert id="addProjectType" useGeneratedKeys="true" keyProperty="projectType.id">
+        INSERT INTO `project_type`
+        (`projectTypeName`,`isShow`)
+        VALUES
+        (#{projectType.projectTypeName},1)
+    </insert>
+
+    <update id="updateProjectType">
+        UPDATE `project_type`
+        <set>
+            <if test="projectType.isShow != null">
+                `isShow`=#{projectType.isShow},
+            </if>
+            <if test="projectType.projectTypeName != null">
+                `projectTypeName`=#{projectType.projectTypeName},
+            </if>
+        </set>
+        WHERE `id`=#{projectType.id}
+    </update>
+
+    <select id="listSelect" resultMap="BaseProjectType">
+        select pt.* from project_type pt ,
+        (select pts.projectTypeId AS projectTypeId ,count(pts.id) as ptsIds
+         from project_type_section pts GROUP BY pts.projectTypeId having ptsIds = 4) ptst
+        WHERE
+        pt.isShow = 1 AND
+        pt.id IN (ptst.projectTypeId)
+
+    </select>
+</mapper>

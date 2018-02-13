@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.ISecondVeidooDepartmentMapper">
+
+
+
+
+
+    <select id="countDepartmentMethod" resultType="java.lang.Integer">
+        SELECT
+        IF(
+          IFNULL(
+            (SELECT COUNT(0) FROM second_veidoo_department svd,department d
+                WHERE svd.departmentId = d.id
+                AND d.companyId = #{companyId} AND d.isValid = 1)
+            ,0)
+        =
+        (SELECT
+        COUNT(0)
+         FROM department dd
+        WHERE  dd.isValid = 1 AND dd.isProjectDepartment = 0 AND dd.companyId = #{companyId})
+        ,
+        1,0
+        )
+    </select>
+
+
+
+
+
+    <select id="queryVeidooMethodByTime" resultType="com.magic.ereal.business.entity.SecondVeidooDepartment">
+        SELECT svd.* FROM second_veidoo_department  svd
+        WHERE 1=1
+        <if test="departmentId != null">
+            AND svd.departmentId = #{departmentId}
+        </if>
+        <if test="time != null">
+            AND svd.`time` <![CDATA[ <= ]]> #{time}
+        </if>
+    </select>
+
+
+    <insert id="addSecondVeidooDepartment" parameterType="com.magic.ereal.business.entity.SecondVeidooDepartment">
+        INSERT INTO second_veidoo_department ( departmentId, `time`, method)
+        VALUES ( #{departmentId}, #{time}, #{method})
+    </insert>
+
+    <update id="updateSecondVeidooDepartment">
+        UPDATE second_veidoo_department
+        <set>
+            <if test="secondVeidooDepartment.method != null">
+                `method` = #{secondVeidooDepartment.method},
+            </if>
+            <if test="secondVeidooDepartment.time != null">
+                `time` = #{secondVeidooDepartment.time},
+            </if>
+            <if test="secondVeidooDepartment.departmentId != null">
+                departmentId = #{secondVeidooDepartment.departmentId},
+            </if>
+        </set>
+        WHERE id = #{secondVeidooDepartment.id}
+    </update>
+
+
+    <select id="queryVeidooMethod" resultType="com.magic.ereal.business.entity.SecondVeidooDepartment">
+        SELECT svd.id,svd.method,d.departmentName,d.id AS departmentId
+        FROM department d LEFT JOIN  second_veidoo_department  svd ON svd.departmentId = d.id
+        WHERE
+        1=1
+        <if test="departmentId != null">
+            AND svd.departmentId = #{departmentId}
+        </if>
+        <if test="companyId != null">
+            AND d.companyId = #{companyId} AND
+            d.isProjectDepartment = 0
+        </if>
+        <if test="time != null">
+            AND svd.`time` <![CDATA[ <= ]]> #{time}
+        </if>
+        GROUP BY d.id
+        ORDER BY d.id DESC
+
+    </select>
+
+
+</mapper>

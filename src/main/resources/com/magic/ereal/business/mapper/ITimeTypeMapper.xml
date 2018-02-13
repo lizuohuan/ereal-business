@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.ITimeTypeMapper" >
+
+
+
+
+
+    <select id="countWorkDiary" resultType="com.magic.ereal.business.entity.TimeTypeEntity">
+        SELECT
+            SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600 * 60 )  AS jobTime ,
+            tt.timeName AS timeName
+        FROM
+            work_diary wd,
+            <if test="departmentId != null">
+                department d,
+            </if>
+            <if test="companyId != null">
+                company com,
+            </if>
+            work_diary_sub wds,
+            time_type tt
+        WHERE
+            wd.id = wds.workDiaryId
+        AND wds.timeTypeId=tt.id
+        <if test="flag == 0">
+            AND wd.workTime = #{time}
+        </if>
+        <if test="flag == 1">
+            AND DATE_FORMAT(wd.workTime,'%Y-%m')  = #{time}
+        </if>
+        <if test="flag == 2">
+            AND DATE_FORMAT(wd.workTime,'%Y')  = #{time}
+        </if>
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+        <if test="companyId != null">
+            AND com.id = #{companyId}
+        </if>
+        <if test="userId != null">
+            AND wd.userId=#{userId}
+        </if>
+        GROUP BY tt.id
+    </select>
+
+
+    <insert id="addTimeType">
+        INSERT INTO `time_type` (`timeName`,`isValid`)
+        VALUES (#{timeType.timeName},1)
+    </insert>
+
+    
+    <update id="updateTimeType">
+        UPDATE `time_type`
+        <set>
+            <if test="timeType.timeName != null">
+                `timeName`=#{timeType.timeName},
+            </if>
+            <if test="timeType.isValid != null">
+                `isValid`=#{timeType.isValid},
+            </if>
+        </set>
+        WHERE `id`=#{timeType.id}
+    </update>
+
+    <update id="delTimeType">
+        UPDATE `time_type`
+        SET `isValid`= 0
+        WHERE `id`=#{timeType.id}
+    </update>
+
+    <select id="queryAllTimeType" resultType="com.magic.ereal.business.entity.TimeType">
+        SELECT  `id`,`timeName`,`isValid`
+        FROM `time_type`
+        WHERE `isValid`=1
+    </select>
+
+
+</mapper>

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IProjectWeekAcceptanceMapper" >
+
+    <resultMap id="BaseResultMap" type="com.magic.ereal.business.entity.ProjectWeekAcceptance">
+        <result column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="projectId" property="projectId" javaType="java.lang.Integer"/>
+        <result column="sectionDetail" property="sectionDetail" javaType="java.lang.String"/>
+        <result column="sumK" property="sumK" javaType="java.lang.Double"/>
+        <result column="totalK" property="totalK" javaType="java.lang.Double"/>
+        <result column="createTime" property="createTime" javaType="java.util.Date"/>
+        <result column="updateTime" property="updateTime" javaType="java.util.Date"/>
+        <result column="status" property="status" javaType="java.lang.Integer"/>
+        <result column="isAdd" property="isAdd" javaType="java.lang.Integer"/>
+        <result column="remark" property="remark" javaType="java.lang.String"/>
+    </resultMap>
+
+    <resultMap id="BaseResultK" type="com.magic.ereal.business.entity.ProjectWeekAcceptance" extends="BaseResultMap">
+        <association property="projectWeekKAllocations" column="id" select="com.magic.ereal.business.mapper.IProjectWeekKAllocationMapper.list2"></association>
+    </resultMap>
+
+
+    <select id="queryProjectPreWeek" resultMap="BaseResultMap">
+        SELECT
+            *
+        FROM
+            project_week_acceptance
+        WHERE
+            projectId = #{projectId}
+            AND `status` IN (1,2)
+        ORDER BY
+            id DESC
+        LIMIT 0,
+         1
+    </select>
+
+    <select id="queryUserKByProject" resultType="com.magic.ereal.business.entity.UserK">
+        SELECT
+            u.`name` AS `name`,
+            (
+            IFNULL((
+                    SELECT
+                        SUM(pk.sumK)
+                    FROM
+                        project_k pk,
+                        project_acceptancerecord pa
+                    WHERE
+                        pk.projectRecordId = pa.id
+                    AND pa.projectId = p.id
+                    AND pk.userId = u.id
+                    GROUP BY pk.userId
+                    ORDER BY pa.id DESC
+                ),0)
+				+
+				(
+                    SELECT
+                        SUM(pk.ratio * sectionSumK / 100)
+                    FROM
+                        project_week_k_allocation pk,
+                        project_week_acceptance pweek
+                    WHERE
+                        pk.projectWeekAcceptanceId = pweek.id
+                    AND pweek.projectId = p.id
+                    AND pk.userId=u.id
+                )
+				) AS userK
+        FROM
+            users u,
+            project p,
+            project_group pg
+        WHERE
+            p.projectGroupId = pg.id
+        AND u.id IN (SELECT userId FROM project_group_user WHERE projectGroupId=p.projectGroupId)
+        AND p.id=#{projectId}
+        GROUP BY
+            u.id
+    </select>
+
+    <select id="queryProjectWeekAcceptanceById" resultMap="BaseResultK">
+        SELECT * FROM  `project_week_acceptance`
+        WHERE `id`=#{id}
+    </select>
+
+    <select id="queryProjectWeekAcceptanceByProject" resultMap="BaseResultK">
+        SELECT * FROM  `project_week_acceptance`
+        WHERE `projectId`=#{projectId} ORDER BY `id` DESC
+    </select>
+
+    <select id="queryProjectWeekAcceptanceByProject2" resultMap="BaseResultK">
+        SELECT * FROM  `project_week_acceptance`
+        WHERE `projectId`=#{projectId} AND `status` NOT IN (0) ORDER BY `id` ASC
+    </select>
+
+    <insert id="addProjectWeekAcceptance" useGeneratedKeys="true" keyProperty="acceptance.id">
+        INSERT INTO `project_week_acceptance`
+        (`projectId`,`sectionDetail`,`sumK`,`createTime`,`updateTime`,`status`,`remark`)
+        VALUES
+        (#{acceptance.projectId},#{acceptance.sectionDetail},#{acceptance.sumK},now(),now(),0,#{acceptance.remark})
+    </insert>
+
+    <update id="updateProjectWeekAcceptance">
+        UPDATE `project_week_acceptance`
+        <set>
+            <if test="acceptance.totalK != null">
+                `totalK`=#{acceptance.totalK},
+            </if>
+            <if test="acceptance.isAdd != null">
+                `isAdd`=#{acceptance.isAdd},
+            </if>
+            <if test="acceptance.remark != null">
+                `remark`=#{acceptance.remark},
+            </if>
+            <if test="acceptance.status != null">
+                `status`=#{acceptance.status},
+            </if>
+            <if test="acceptance.sumK != null">
+                `sumK`=#{acceptance.sumK},
+            </if>
+            <if test="acceptance.sectionDetail != null">
+                `sectionDetail`=#{acceptance.sectionDetail},
+            </if>
+            `updateTime`=now()
+        </set>
+        WHERE `id`=#{acceptance.id}
+    </update>
+
+
+
+</mapper>

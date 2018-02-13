@@ -1,0 +1,650 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IWorkDiaryMapper" >
+
+    <resultMap id="BaseWorkDiary" type="com.magic.ereal.business.entity.WorkDiary">
+        <result column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="workTime" property="workTime" javaType="java.util.Date"/>
+        <result column="status" property="status" javaType="java.lang.Integer"/>
+        <result column="verifier" property="verifier" javaType="java.lang.Integer"/>
+        <result column="userId" property="userId" javaType="java.lang.Integer"/>
+        <result column="createTime" property="createTime" javaType="java.util.Date"/>
+        <result column="updateTime" property="updateTime" javaType="java.util.Date"/>
+
+        <!-- 业务字段 -->
+        <result column="verifierName" property="verifierName" javaType="java.lang.String"/>
+        <result column="departmentName" property="departmentName" javaType="java.lang.String"/>
+        <result column="name" property="userName" javaType="java.lang.String"/>
+        <result column="totalTime" property="totalTime" javaType="java.lang.Double"/>
+    </resultMap>
+
+    <!-- 查询 创建人的部分字段值 -->
+    <resultMap id="WorkDiaryIncludeUser" type="com.magic.ereal.business.entity.WorkDiary" extends="BaseWorkDiary">
+        <association property="user" column="userId" select="com.magic.ereal.business.mapper.IUserMapper.queryUserOtherInfo"/>
+        <association property="workDiarySubs" column="id" select="com.magic.ereal.business.mapper.IWorkDiarySubMapper.queryWorkDiarySubByWorkDiary"/>
+    </resultMap>
+
+
+    <!-- 查询 创建人的部分字段值 -->
+    <resultMap id="WorkDiaryIncludeUser2" type="com.magic.ereal.business.entity.WorkDiary" extends="BaseWorkDiary">
+        <association property="user" column="userId" select="com.magic.ereal.business.mapper.IUserMapper.queryUserOtherInfo"/>
+        <association property="workDiarySubs" column="id" select="com.magic.ereal.business.mapper.IWorkDiarySubMapper.queryWorkDiarySubByWorkDiary2"/>
+    </resultMap>
+
+    <resultMap id="WorkDiaryIncludeOnlyUser" type="com.magic.ereal.business.entity.WorkDiary" extends="BaseWorkDiary">
+        <association property="user" column="userId" select="com.magic.ereal.business.mapper.IUserMapper.queryUserOtherInfo"/>
+    </resultMap>
+
+    <!-- 查询 状态进度详情集合 -->
+    <resultMap id="WorkDiaryIncludeStatusDetail" type="com.magic.ereal.business.entity.WorkDiary" extends="WorkDiaryIncludeUser">
+        <association property="details" column="id" select="com.magic.ereal.business.mapper.IWorkDiaryStatusDetailMapper.queryByWorkDiary"/>
+    </resultMap>
+    <!-- 查询 抄送人详情集合 -->
+    <resultMap id="WorkDiaryCc" type="com.magic.ereal.business.entity.WorkDiary" extends="WorkDiaryIncludeStatusDetail">
+        <association property="workDiaryCcList" column="id" select="com.magic.ereal.business.mapper.IWorkDiaryCcMapper.list"/>
+    </resultMap>
+
+    <select id="queryWorkDiaryVerifier" resultMap="BaseWorkDiary">
+        SELECT
+            wd.*
+        FROM
+            work_diary wd,
+            users u
+        WHERE
+            wd.verifier = u.id
+        AND (wd.`status` = 4001 OR wd.`status` = 4003)
+            <if test="verifierId != null">
+                AND wd.`verifier` = #{verifierId}
+            </if>
+    </select>
+
+    <select id="queryWorkDiaryByTime" resultMap="WorkDiaryIncludeUser2">
+        SELECT
+            wd.*, u.`name` AS userName
+        FROM
+            users u
+        LEFT JOIN work_diary wd ON u.id = wd.userId AND wd.`status` = 4004
+        AND DATE_FORMAT(wd.workTime,'%Y-%m-%d') =DATE_FORMAT(#{time},'%Y-%m-%d')
+        LEFT JOIN work_diary_sub wds ON wd.id = wds.workDiaryId
+        LEFT JOIN department d ON u.department_id = d.id
+        WHERE
+            u.role_id NOT IN (1)
+        AND u.Incumbency NOT IN (3)
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        GROUP BY
+            u.id
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+    </select>
+
+
+    <select id="countWorkDiaryByTime" resultType="java.lang.Integer">
+        SELECT
+            COUNT(*)
+        FROM
+            users u
+        LEFT JOIN work_diary wd ON u.id = wd.userId
+        AND wd.workTime = #{time}
+        LEFT JOIN work_diary_sub wds ON wd.id = wds.workDiaryId
+        LEFT JOIN department d ON u.department_id = d.id
+        WHERE
+            1 = 1
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        GROUP BY
+            u.id
+
+    </select>
+
+
+    <select id="queryWorkDiaryCCByUser" resultMap="WorkDiaryIncludeUser">
+        SELECT
+            wd.*
+        FROM
+            work_diary wd,
+            work_diary_cc cc
+        WHERE
+            wd.id = cc.work_diary_id
+        AND cc.user_id = #{userId}
+        ORDER BY wd.id DESC
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+    </select>
+
+    <select id="queryWorkDiaryByDate" resultMap="WorkDiaryIncludeUser">
+        SELECT * FROM `work_diary` WHERE  `workTime`=#{date} AND `userId`=#{userId} AND `status` = 4000
+    </select>
+
+    <select id="queryNearWorkDiaryByUser" resultMap="WorkDiaryIncludeUser">
+        SELECT
+            `id`,
+            workTime,
+            `status`,
+            verifier,
+            userId,
+            createTime,
+            updateTime
+        FROM
+            work_diary
+        WHERE
+            `status` = 4000
+        AND userId = #{userId}
+        ORDER BY
+            createTime DESC
+        LIMIT 0,1
+    </select>
+
+    <select id="queryWorkDiaryByUser" resultMap="BaseWorkDiary">
+        SELECT * FROM `work_diary`
+        WHERE `userId`=#{userId}
+        AND DATE_FORMAT(`workTime`,'%Y-%m-%d')=DATE_FORMAT(#{workTime},'%Y-%m-%d')
+    </select>
+
+    <select id="queryWorkDiaryByItem" resultMap="WorkDiaryCc">
+        SELECT wd.id,wd.userId,wd.createTime,wd.updateTime,wd.workTime,wd.`status`,
+        (SELECT SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) /  60)  FROM transactionsub ts,transactiontype ty,work_diary_sub wds
+        ,job_type jb
+        WHERE jb.transactionSubId=ts.id
+        AND ts.transactionTypeId=ty.id
+        AND wds.jobTypeId=jb.id AND wds.workDiaryId=wd.id AND( ty.id = 1 OR ty.id=2)) AS `totalTime`
+
+        FROM `work_diary` wd,department d,users u
+        WHERE
+        wd.userId = u.id
+        AND d.id = u.department_id
+        AND wd.`status` != 4000
+        <if test="userId != null">
+            AND wd.userId = #{userId}
+        </if>
+        <if test="status != null">
+
+            <if test="status == 4001">
+                <!-- 待审核状态 -->
+                AND (wd.`status` = 4001 OR wd.`status` = 4003)
+            </if>
+
+            <if test="status == 4002">
+                <!-- 审核不通过状态 -->
+                AND (wd.`status` = 4002 OR wd.`status` = 4005)
+            </if>
+
+            <if test="status == 4003">
+                <!-- 审核通过状态 -->
+                AND wd.`status` = 4004
+            </if>
+
+
+        </if>
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        <if test="departmentId != null">
+            AND u.department_id = #{departmentId}
+            AND wd.userId != #{currentUserId}
+        </if>
+        GROUP BY wd.id
+
+        <if test="orderBy == 0">
+            ORDER BY wd.id DESC
+        </if>
+        <if test="orderBy == 1">
+            ORDER BY totalTime DESC
+        </if>
+        <if test="orderBy == 2">
+            ORDER BY totalTime ASC
+        </if>
+
+
+        <if test="limit != null and limitSize != null">
+            limit #{limit}, #{limitSize}
+        </if>
+    </select>
+
+
+    <select id="queryWorkDiaryByItemForAPI" resultMap="WorkDiaryIncludeOnlyUser">
+        SELECT wd.id,wd.userId,wd.createTime,wd.updateTime,wd.workTime,wd.`status`,
+        (SELECT SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) /  60)  FROM transactionsub ts,transactiontype ty,work_diary_sub wds
+
+        WHERE
+         ts.transactionTypeId=ty.id
+        AND wds.transactionSubId = ts.id AND wds.workDiaryId=wd.id AND ts.id NOT IN (6,7)) AS `totalTime`
+
+        FROM `work_diary` wd,department d,users u,work_diary_sub wds2
+        WHERE
+        wd.userId = u.id
+        AND d.id = u.department_id
+        AND wds2.workDiaryId = wd.id
+        AND wd.`status` != 4000
+        <if test="userId != null">
+            AND wd.userId = #{userId}
+        </if>
+        <if test="status != null">
+
+            <if test="status == 4001">
+                <!-- 待审核状态 -->
+                AND (wd.`status` = 4001 OR wd.`status` = 4003)
+            </if>
+
+            <if test="status == 4002">
+                <!-- 审核不通过状态 -->
+                AND (wd.`status` = 4002 OR wd.`status` = 4005)
+            </if>
+
+            <if test="status == 4003">
+                <!-- 审核通过状态 -->
+                AND wd.`status` = 4004
+            </if>
+
+
+        </if>
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        <if test="jobContent != null">
+            AND (wds2.jobContent LIKE '%${jobContent}%' OR u.`name` LIKE '%${jobContent}%' )
+        </if>
+        <if test="departmentId != null">
+            AND u.department_id = #{departmentId}
+            AND wd.userId != #{currentUserId}
+        </if>
+        GROUP BY wd.id
+
+        <if test="orderBy == 0">
+            ORDER BY wd.workTime DESC
+        </if>
+        <if test="orderBy == 1">
+            ORDER BY totalTime DESC
+        </if>
+        <if test="orderBy == 2">
+            ORDER BY totalTime ASC
+        </if>
+
+
+        <if test="limit != null and limitSize != null">
+            limit #{limit}, #{limitSize}
+        </if>
+    </select>
+
+    <select id="queryWorkDiaryById" resultMap="WorkDiaryIncludeStatusDetail">
+         SELECT
+            wd.*,
+            v.`name` AS verifierName
+        FROM
+            work_diary wd
+        LEFT JOIN users v ON wd.verifier = v.id
+        WHERE wd.id=#{id}
+    </select>
+
+    <insert id="addWorkDiary" useGeneratedKeys="true" keyProperty="workDiary.id">
+        INSERT  INTO `work_diary` (`workTime`,`status`,`verifier`,`userId`,`createTime`,`updateTime`)
+        VALUES (#{workDiary.workTime},#{workDiary.status},#{workDiary.verifier},#{workDiary.userId},now(),now())
+    </insert>
+
+    <update id="batchUpdateWorkDiaryStatus">
+        <foreach collection="workDiaries" item="workDiary" index="index" separator=";">
+            UPDATE `work_diary`
+            <set>
+                <if test="workDiary.createTime != null">
+                    `createTime`=#{workDiary.createTime},
+                </if>
+                <if test="workDiary.verifier != null">
+                    `verifier`=#{workDiary.verifier},
+                </if>
+                <if test="workDiary.status != null">
+                    `status`=#{workDiary.status},
+                </if>
+                <if test="workDiary.workTime != null">
+                    `workTime`=#{workDiary.workTime},
+                </if>
+                `updateTime`=now()
+            </set>
+            WHERE `id`=#{workDiary.id}
+        </foreach>
+    </update>
+
+    <update id="updateWorkDiary">
+        UPDATE `work_diary`
+        <set>
+            <!--<if test="workDiary.createTime != null">
+                `createTime`=#{workDiary.createTime},
+            </if>-->
+
+            <if test="workDiary.verifier != null">
+                `verifier`=#{workDiary.verifier},
+            </if>
+            <if test="workDiary.status != null">
+                `status`=#{workDiary.status},
+            </if>
+            <if test="workDiary.workTime != null">
+                `workTime`=#{workDiary.workTime},
+            </if>
+            `updateTime`=now()
+        </set>
+        WHERE `id`=#{workDiary.id}
+    </update>
+
+
+
+    <!-- 传递卡日志列表（每天） -->
+    <select id="listForWeb" resultMap="WorkDiaryIncludeStatusDetail" parameterType="map">
+        select wd.*,u.name AS userName,v.name AS verifierName ,d.departmentName AS departmentName,
+        (SELECT SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 1000 * 60)
+        FROM transactionsub ts,transactiontype ty,work_diary_sub wds
+        WHERE j.transactionSubId=ts.id
+        AND ts.transactionTypeId=ty.id
+        AND wds.jobTypeId=j.id AND wds.workDiaryId=wd.id AND( ty.id = 1 OR ty.id=2)) AS `totalTime`
+        from
+            work_diary wd
+        LEFT JOIN users v ON v.id = wd.verifier
+        LEFT JOIN work_diary_sub ws ON  ws.workDiaryId = wd.id
+        LEFT JOIN job_type j ON ws.jobTypeId = j.id,
+        users u,department d
+        WHERE wd.userId = u.id AND d.id = u.department_id
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        <if test="workDiary.verifierName != null and workDiary.verifierName != ''">
+            AND v.name LIKE '%${workDiary.verifierName }%'
+        </if>
+        <if test="workDiary.userName != null and workDiary.userName != ''">
+            AND u.name LIKE '%${workDiary.userName }%'
+        </if>
+        <!-- 如果type == 1 查看我的 -->
+        <if test="type == 1">
+            AND wd.`userId` = #{workDiary.userId}
+        </if>
+        <!-- 如果type == 2 查看我的团队 -->
+        <if test="type == 2">
+            AND u.department_id = #{departmentId}
+            AND u.id not in(#{workDiary.userId})
+        </if>
+        <!-- 如果type == 3 查看其他团队 -->
+        <if test="type == 3">
+            AND u.department_id = #{departmentId}
+        </if>
+        <if test="workDiary.status != null">
+            AND wd.`status` = #{workDiary.status}
+        </if>
+        <if test="workDiary.workTime != null">
+            AND DATE_FORMAT(wd.workTime,'%Y-%m-%d') = DATE_FORMAT(#{workDiary.workTime},'%Y-%m-%d')
+        </if>
+        <if test="workDiary.createTime != null">
+            AND DATE_FORMAT(wd.createTime,'%Y-%m-%d') = DATE_FORMAT(#{workDiary.createTime},'%Y-%m-%d')
+        </if>
+        GROUP BY wd.id
+        ORDER BY
+        <if test="pageArgs != null">
+            <if test="pageArgs.column != null and pageArgs.column != ''">
+                ${pageArgs.column} ${pageArgs.order},
+            </if>
+        </if>
+        wd.id DESC
+        <if test="pageArgs != null">
+            limit #{pageArgs.pageStart}, #{pageArgs.pageSize}
+        </if>
+    </select>
+
+    <select id="listForWebCount" resultType="integer" parameterType="map">
+        SELECT
+        COUNT(*)
+        FROM
+        work_diary wd
+        LEFT JOIN users v ON v.id = wd.verifier
+        LEFT JOIN work_diary_sub ws ON ws.workDiaryId = wd.id
+        LEFT JOIN job_type j ON ws.jobTypeId = j.id,
+        users u,
+        department d
+        WHERE wd.userId = u.id AND d.id = u.department_id
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        <if test="workDiary.verifierName != null and workDiary.verifierName != ''">
+            AND v.name LIKE '%${workDiary.verifierName }%'
+        </if>
+        <if test="workDiary.userName != null and workDiary.userName != ''">
+            AND u.name LIKE '%${workDiary.userName }%'
+        </if>
+        <!-- 如果type == 1 查看我的 -->
+        <if test="type == 1">
+            AND wd.`userId` = #{workDiary.userId}
+        </if>
+        <!-- 如果type == 2 查看我的团队 -->
+        <if test="type == 2">
+            AND u.department_id = #{departmentId}
+            AND u.id not in(#{workDiary.userId})
+        </if>
+        <!-- 如果type == 3 查看其他团队 -->
+        <if test="type == 3">
+            AND u.department_id = #{departmentId}
+        </if>
+        <if test="workDiary.status != null">
+            AND wd.`status` = #{workDiary.status}
+        </if>
+        <if test="workDiary.workTime != null">
+            AND DATE_FORMAT(wd.workTime,'%Y-%m-%d') = DATE_FORMAT(#{workDiary.workTime},'%Y-%m-%d')
+        </if>
+        <if test="workDiary.createTime != null">
+            AND DATE_FORMAT(wd.createTime,'%Y-%m-%d') = DATE_FORMAT(#{workDiary.createTime},'%Y-%m-%d')
+        </if>
+    </select>
+
+    <select id="countWorkDiary" resultType="com.magic.ereal.business.entity.TimeTypeEntity">
+        SELECT
+        SUM(
+        (
+        UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)
+        ) / 3600 * 60
+        ) AS jobTime,
+        ty.transactionName AS timeName,
+        ty.id AS timeTypeId
+        FROM
+        work_diary wd,
+        <if test="departmentId != null">
+            department d,
+        </if>
+        <if test="companyId != null">
+            company com,
+        </if>
+        work_diary_sub wds,
+        transactionsub ts,
+        transactiontype ty,
+        job_type jt
+        WHERE
+        wd.id = wds.workDiaryId
+        AND wds.jobTypeId = jt.id
+        AND jt.transactionSubId = ts.id
+        AND ts.transactionTypeId = ty.id
+        <if test="flag == 0">
+            AND DATE_FORMAT(wd.workTime,'%Y-%c-%d')  = DATE_FORMAT(#{time},'%Y-%c-%d')
+        </if>
+        <if test="flag == 1">
+            AND DATE_FORMAT(wd.workTime,'%Y-%c')  = DATE_FORMAT(#{time},'%Y-%c')
+        </if>
+        <if test="flag == 2">
+            AND DATE_FORMAT(wd.workTime,'%Y')  = DATE_FORMAT(#{time},'%Y')
+        </if>
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+        <if test="companyId != null">
+            AND com.id = #{companyId}
+        </if>
+        <if test="userId != null">
+            AND wd.userId=#{userId}
+        </if>
+        GROUP BY
+        ty.id
+    </select>
+
+
+    <select id="countWorkDiaryDetail" resultType="com.magic.ereal.business.entity.TimeTypeEntity">
+        SELECT
+            SUM(
+            (
+            UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)
+            ) / 3600
+            ) AS jobTime,
+            ty.transactionName AS timeName,
+            wd.workTime AS workTime,
+            u.`name` AS userName,
+            u.id AS userId,
+            ty.id AS timeTypeId
+        FROM
+            transactiontype ty
+            LEFT JOIN transactionsub ts ON ts.transactionTypeId = ty.id
+            LEFT JOIN job_type jt ON jt.transactionSubId = ts.id
+            LEFT JOIN work_diary_sub wds ON wds.jobTypeId = jt.id
+            LEFT JOIN work_diary wd ON wd.id = wds.workDiaryId
+            LEFT JOIN users u ON u.id = wd.userId
+            LEFT JOIN department d ON d.id=u.department_id
+            LEFT JOIN company com ON com.id=d.companyId
+        WHERE
+            wd.`status`=4004
+            AND ty.id NOT IN (4)
+            <!--<if test="flag == 0">-->
+                <!--AND DATE_FORMAT(wd.workTime, '%Y-%m-%d')=DATE_FORMAT(#{time},'%Y-%m-%d')-->
+            <!--</if>-->
+            <!--<if test="flag == 1">-->
+                <!--AND DATE_FORMAT(wd.workTime, '%Y-%m') = DATE_FORMAT(#{time},'%Y-%m')-->
+            <!--</if>-->
+
+            <if test="userId != null">
+                AND wd.userId = #{userId}
+            </if>
+
+            <if test="departmentId != null">
+                AND wd.userId IN (SELECT id FROM users WHERE department_id = #{departmentId})
+            </if>
+
+            <if test="companyId != null">
+                AND wd.userId IN (SELECT id FROM users WHERE department_id IN (SELECT  id FROM department WHERE  companyId = #{companyId}))
+            </if>
+
+        GROUP BY
+            <if test="flag == 0">
+                DATE_FORMAT(wd.workTime, '%Y-%m-%d'),
+                ty.id,
+                wd.userId
+            </if>
+            <if test="flag == 1">
+                DATE_FORMAT(wd.workTime, '%Y-%m'),
+                ty.id,
+                wd.userId
+            </if>
+            ORDER BY wd.workTime DESC
+    </select>
+
+    <delete id="delWorkDiary">
+        DELETE FROM `work_diary` WHERE `id`=#{id}
+    </delete>
+
+
+    <update id="updateListStatus" >
+      UPDATE work_diary
+        SET `status` = #{status}
+      where 1 = 1
+        <if test="type == 1">
+            and id in (
+            <foreach collection="ids" separator="," item="id">
+                #{id}
+            </foreach>
+            )
+        </if>
+      <if test="type == 2">
+          and id in
+          ((SELECT a.id FROM (SELECT w.id FROM work_diary w
+          WHERE w.`status` = 4001 and w.userId in
+          (SELECT u.id from users u where u.department_id = #{departmentId})) a )
+      </if>
+      <if test="type == 3">
+          and id in (SELECT a.id FROM (select w.id from work_diary w where w.`status` = 4003
+          and w.userId in (
+          select u.id from users u,department d where u.department_id = d.id
+          and d.companyId = (select c.id from company c,department d where c.id = d.companyId and
+          d.id = #{departmentId}))
+          ) a)
+      </if>
+    </update>
+
+
+
+    <update id="batchUpdateWorkDiary">
+        <foreach collection="works" index="index" item="work"  separator=";">
+            UPDATE `work_diary` SET `status`=#{work.`status`} WHERE `id`=#{work.id}
+        </foreach>
+    </update>
+
+
+    <select id="isHaveAuditWork" resultMap="BaseWorkDiary">
+        select * from work_diary
+        WHERE 1 = 1
+        <if test="type == 2">
+            and id in
+            (SELECT w.id FROM work_diary w
+            WHERE w.status = 4001 and w.userId in
+            (SELECT u.id from users u where u.department_id = #{departmentId}))
+        </if>
+        <if test="type == 3">
+            and id in (select w.id from work_diary w where w.`status` = 4003
+            and w.userId in (
+            select u.id from users u,department d where u.department_id = d.id
+            and d.companyId = (select c.id from company c,department d where c.id = d.companyId and
+            d.id = #{departmentId})
+            ))
+        </if>
+    </select>
+
+
+    <select id="queryCheckpending" resultMap="WorkDiaryIncludeOnlyUser">
+        SELECT wd.id,wd.userId,wd.createTime,wd.updateTime,wd.workTime,wd.`status`,
+        (
+        SELECT
+        SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 60)
+        FROM
+        transactionsub ts,
+        transactiontype ty,
+        work_diary_sub wds
+        WHERE
+        ts.transactionTypeId = ty.id
+        AND wds.transactionSubId = ts.id
+        AND wds.workDiaryId = wd.id
+        AND ts.id NOT IN (6)
+        ) AS `totalTime`,
+        d.departmentName AS departmentName,u1.`name` AS userName FROM work_diary wd,department d,users u1
+        WHERE
+        wd.userId = u1.id
+        AND d.id=u1.department_id
+        <if test="isManager == 1 and userId != null">
+            <!-- 是经理 -->
+            AND
+            wd.userId IN (
+              SELECT u.id FROM users u WHERE  u.department_id = (SELECT department_id FROM users WHERE id=#{userId})
+            )
+            AND wd.`status`=4001
+        </if>
+        <if test="isManager == 2 and userId != null">
+            <!-- 是综合部经理 -->
+            AND
+            wd.userId IN (
+            SELECT u.id FROM users u WHERE  (u.department_id IN (SELECT id FROM department WHERE
+                companyId = (  SELECT companyId FROM department WHERE id =#{departmentId}) AND wd.`status`=4003 ))
+            OR (u.role_id IN (SELECT id FROM role WHERE (`level`=1 AND type = 1) <!-- OR type=0 -->) AND wd.`status`=4001)
+            )
+        </if>
+        AND wd.userId != #{userId}
+        AND d.companyId = (SELECT  companyId FROM department WHERE id=#{departmentId})
+        ORDER BY d.id DESC
+    </select>
+
+</mapper>

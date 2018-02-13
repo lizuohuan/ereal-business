@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IThreeVeidooMapper" >
+
+
+    <insert id="addThreeVeidoo">
+
+        INSERT INTO `three_veidoo`
+        (targetName,weight,`describe`)
+        VALUES
+        (#{threeVeidoo.targetName},#{threeVeidoo.weight},#{threeVeidoo.describe})
+
+    </insert>
+
+
+    <update id="updateThreeVeidoo">
+        UPDATE `three_veidoo`
+        <set>
+            <if test="threeVeidoo.describe != null">
+                `describe`=#{threeVeidoo.describe},
+            </if>
+            <if test="threeVeidoo.weight != null">
+                `weight`=#{threeVeidoo.weight},
+            </if>
+            <if test="threeVeidoo.targetName != null">
+                `targetName`=#{threeVeidoo.targetName},
+            </if>
+        </set>
+        WHERE `id`=#{threeVeidoo.id}
+    </update>
+
+    <select id="queryAllThreeVeidoo" resultType="com.magic.ereal.business.entity.ThreeVeidoo">
+        SELECT `id`,`describe`,`weight`,`targetName` FROM `three_veidoo`
+    </select>
+
+    <select id="queryExcludeOneOrTwo" resultType="com.magic.ereal.business.entity.ThreeVeidoo">
+        SELECT `id`,`describe`,`weight`,`targetName` FROM `three_veidoo` where id != 1 and id != 2
+    </select>
+
+
+    <select id="statisticsYd" resultType="java.lang.Double">
+        SELECT
+            SUM((SELECT
+                SUM(
+                    (UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600
+                )
+            FROM
+                work_diary wd,
+                work_diary_sub wds,
+                job_type jt,
+                transactionsub sb
+            WHERE
+                wd.id = wds.workDiaryId
+            AND wds.jobTypeId = jt.id
+            AND jt.transactionSubId = sb.id
+            AND sb.transactionTypeId = 3
+            AND wd.userId=u.id
+            AND wd.workTime BETWEEN #{startTime} AND #{endTime}
+            ))
+        FROM users u
+        WHERE
+        1=1
+        <if test="userId != null">
+            AND u.id=#{userId}
+        </if>
+        <if test="departmentId != null">
+            AND u.id IN (SELECT id FROM  users WHERE department_id = #{departmentId})
+        </if>
+
+
+    </select>
+
+
+    <select id="statisticsPerson" resultType="java.lang.Double">
+        SELECT
+        SUM((SELECT
+            SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) -- 个人工作学习总时间
+            FROM
+            work_diary wd,
+            work_diary_sub wds,
+            job_type jt,
+            transactionsub sb
+            WHERE
+            wd.id = wds.workDiaryId
+            AND wds.jobTypeId = jt.id
+            AND sb.id = jt.transactionSubId
+            AND (
+            sb.transactionTypeId = 1
+            OR sb.transactionTypeId = 2
+            )
+            AND wd.workTime BETWEEN #{startTime} AND #{endTime}
+            AND wd.userId=u.id
+            ) /  -- 30 * 当月个人出勤天数 / 21
+          30 *
+                (
+                SELECT
+                IF(
+                (SELECT days FROM month_days WHERE DATE_FORMAT(dateTime,'%Y-%m')=DATE_FORMAT(#{startTime},'%Y-%m')) IS NULL ,22,
+                (SELECT days FROM month_days WHERE DATE_FORMAT(dateTime,'%Y-%m')=DATE_FORMAT(#{startTime},'%Y-%m'))
+                )
+                -
+                (SELECT IF(SUM(dayNum) IS NULL ,0 ,SUM(dayNum)) FROM month_days_user mu,month_days md WHERE mu.monthDaysId=md.id AND DATE_FORMAT(md.dateTime,'%Y-%m')=DATE_FORMAT(#{startTime},'%Y-%m')
+                AND ( mu.type=1 OR mu.type=3 OR mu.type=4) AND mu.userId = u.id
+                )
+
+                ) -- 计算 当月个人出勤天数
+                / 21) AS person
+        FROM  users u
+        WHERE
+        1=1
+        <if test="userId != null">
+            AND u.id=#{userId}
+        </if>
+        <if test="departmentId != null">
+            AND u.id IN (SELECT id FROM  users WHERE department_id = #{departmentId})
+        </if>
+        <if test="companyId != null">
+            AND u.id IN (SELECT id FROM  users WHERE department_id IN (SELECT id FROM department WHERE companyId=#{companyId}))
+        </if>
+
+    </select>
+
+
+
+    <select id="countStatisticsThreeVeidoo" resultType="object">
+        SELECT * FROM
+        department d
+        ,users u
+        WHERE d.id = u.department_id  AND
+        u.id NOT IN(SELECT us.userId FROM users_statistics us
+        WHERE us.startTime = #{startTime} AND us.endTime = #{endTime}
+        AND us.wwcl IS NULL)
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        GROUP BY u.id
+
+    </select>
+
+
+
+    <resultMap id="BaseThreeVeidooTemp" type="com.magic.ereal.business.entity.ThreeVeidooTemp">
+        <result column="userName" property="userName" javaType="java.lang.String"/>
+        <result column="departmentName" property="departmentName" javaType="java.lang.String"/>
+        <result column="userId" property="userId" javaType="java.lang.Integer"/>
+        <result column="departmentId" property="departmentId" javaType="java.lang.Integer"/>
+        <result column="kg" property="kg" javaType="java.lang.Double"/>
+        <result column="tz" property="tz" javaType="java.lang.Double"/>
+        <result column="yd" property="yd" javaType="java.lang.Double"/>
+        <result column="hy" property="hy" javaType="java.lang.Double"/>
+        <result column="wx" property="wx" javaType="java.lang.Double"/>
+        <result column="zb" property="zb" javaType="java.lang.Double"/>
+        <result column="personKCulture" property="personKCulture" javaType="java.lang.Double"/>
+        <result column="teamKCulture" property="teamKCulture" javaType="java.lang.Double"/>
+        <result column="teamKCultureFinishRate" property="teamKCultureFinishRate" javaType="java.lang.Double"/>
+        <association property="threeVeidooStas" column="{userId=userId,startTime=startTime,endTime=endTime}"
+                     select="com.magic.ereal.business.mapper.IThreeVeidooScoreMapper.queryThreeVeidooScoreByMap"/>
+
+    </resultMap>
+
+
+
+    <select id="statisticsThreeVeidoo" resultMap="BaseThreeVeidooTemp">
+        SELECT
+        u.`name` AS userName,#{startTime} AS startTime,#{endTime} AS endTime,d.departmentName AS departmentName,
+        IFNULL(IF(
+        u.role_id = 12,
+        (SELECT
+        SUM(
+            IF((SELECT COUNT(*) FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) AND projectId = p.id)
+                > 0,
+                (SELECT score FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) ORDER BY createTime DESC LIMIT 0,1)
+                ,
+                (SELECT score FROM project_acceptancerecord WHERE type=1 AND `status`=12 AND projectId=p.id
+                ORDER BY createTime DESC LIMIT 0,1)
+            )
+        )
+        / COUNT(0)
+        * 30 / 70
+        FROM project p
+        WHERE
+        p.departmentId=u.department_id
+        AND
+        (p.`status`=5008 OR p.`status`=5007 OR p.`status`=5006)
+        AND p.overTime BETWEEN  #{startTime} AND #{endTime}
+        ),
+        IF(
+        (SELECT sp_isProjectDepartment(u.id,#{startTime}))=1,
+        (SELECT
+        IF((SELECT COUNT(0) FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) AND projectId = p.id)
+            > 0,
+            (SELECT score FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) ORDER BY createTime DESC LIMIT 0,1)
+            ,
+            (SELECT score FROM project_acceptancerecord WHERE type=1 AND `status`=12 AND projectId=p.id
+            ORDER BY createTime DESC LIMIT 0,1)
+        )
+        / COUNT(0) * 30 / 70
+        FROM project p,project_group_user pgu
+        WHERE
+        p.projectGroupId=pgu.projectGroupId
+        AND pgu.userId=u.id
+        AND
+        (p.`status`=5008 OR p.`status`=5007 OR p.`status`=5006)
+        AND p.overTime BETWEEN  #{startTime} AND #{endTime}
+        )
+        ,
+        (SELECT
+        SUM(IFNULL(kg.score,0))
+        FROM three_veidoo_kg kg
+        WHERE
+        kg.userId=u.id
+        AND kg.startTime = #{startTime} AND kg.endTime = #{endTime}
+        )
+        )
+        ),0) as kg,
+
+        IF(
+        IFNULL((sp_duty_ok(#{startTime},u.id) - sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id)
+        / sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id)
+        ),0) >
+        ((IFNULL(sp_duty_ok(#{startTime},u.id),0) - (SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+        WHERE uu.department_id = dd.id AND dd.companyId = 10 AND uu.Incumbency = 2))
+        /
+        (SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+        WHERE uu.department_id = dd.id AND dd.companyId = 10 AND uu.Incumbency = 2))
+        ,
+        IFNULL((sp_duty_ok(#{startTime},u.id) - sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id)
+        / sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id)
+        ),0)
+        ,
+        ((IFNULL(sp_duty_ok(#{startTime},u.id),0) - (SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+        WHERE uu.department_id = dd.id AND dd.companyId = 10 AND uu.Incumbency = 2))
+        /
+        (SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+        WHERE uu.department_id = dd.id AND dd.companyId = 10 AND uu.Incumbency = 2))
+        ) AS tz,
+        (
+        (SELECT
+        IFNULL(
+        IF ((SUM(UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) >= 8, 4,
+        (4 - (SUM(UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) / 2) ),0 )
+        FROM
+        work_diary wd,
+        work_diary_sub wds,
+        job_type jt,
+        transactionsub sb
+        WHERE
+        wd.id = wds.workDiaryId
+        AND wds.jobTypeId = jt.id
+        AND jt.transactionSubId = sb.id
+        AND sb.transactionTypeId = 3
+        AND wd.userId = u.id
+        AND wd.workTime BETWEEN #{startTime} AND #{endTime})
+        +
+        (SELECT
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=6 AND userId=u.id
+        AND  startTime = #{startTime} AND endTime = #{endTime} ),0)) * 0.6
+        )AS yd,
+
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=3 AND userId=u.id
+        AND startTime = #{startTime} AND endTime = #{endTime}),0) AS hy,
+
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=4 AND userId=u.id
+        AND startTime = #{startTime} AND endTime = #{endTime}),0) AS wx,
+
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=5 AND userId=u.id
+        AND startTime = #{startTime} AND endTime = #{endTime}),0) AS zb,
+        IFNULL((
+        SELECT SUM(IFNULL(score,0)) FROM  three_veidoo_kg WHERE type=1 AND userId=u.id AND startTime = #{startTime} AND endTime = #{endTime}
+        ),0) AS personKCulture,
+        u.id AS userId
+        FROM
+        users u,department d
+        WHERE u.department_id = d.id
+        AND u.id NOT IN(SELECT us.userId FROM users_statistics us
+        WHERE us.startTime = #{startTime} AND us.endTime = #{endTime}
+        AND us.wwcl IS NOT NULL)
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+    </select>
+
+
+    <resultMap id="includeScore" type="com.magic.ereal.business.entity.ThreeVeidooTemp" extends="BaseThreeVeidooTemp">
+        <association property="usersStatisticsThrees" column="{userId=userId,startTime=startTime,endTime=endTime}"
+                     select="com.magic.ereal.business.mapper.IThreeVeidooScoreMapper.queryThreeVeidooScoreByUserMap"/>
+        <association property="lastUsersStatisticsThrees" column="{userId=userId,startTime=lastStartTime,endTime=lastEndTime}"
+                     select="com.magic.ereal.business.mapper.IThreeVeidooScoreMapper.queryThreeVeidooScoreByUserMap"/>
+    </resultMap>
+
+    <select id="statisticsThreeVeidooForUser" resultMap="includeScore">
+        SELECT
+        u.`name` AS userName,#{startTime} AS startTime,#{endTime} AS endTime,d.departmentName AS departmentName,
+        #{lastStartTime} AS lastStartTime,#{lastEndTime} AS lastEndTime,
+        IFNULL(IF(
+        u.role_id = 12,
+        (SELECT
+        SUM(
+          IF((SELECT COUNT(*) FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) AND projectId = p.id)
+            > 0,
+            (SELECT score FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) ORDER BY createTime DESC LIMIT 0,1)
+            ,
+            (SELECT score FROM project_acceptancerecord WHERE type=1 AND `status`=12 AND projectId=p.id
+            ORDER BY createTime DESC LIMIT 0,1)
+          )
+        ) / COUNT(0)
+        * 30 / 70
+        FROM project p
+        WHERE
+        p.departmentId=u.department_id
+        AND
+        (p.`status`=5008 OR p.`status`=5007 OR p.`status`=5006)
+        AND p.overTime BETWEEN  #{startTime} AND #{endTime}
+        ),
+        IF(
+        (SELECT sp_isProjectDepartment(u.id,#{startTime}))=1,
+        (SELECT
+
+        IF((SELECT COUNT(0) FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) AND projectId = p.id)
+            > 0,
+            (SELECT score FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) ORDER BY createTime DESC LIMIT 0,1)
+            ,
+            (SELECT score FROM project_acceptancerecord WHERE type=1 AND `status`=12 AND projectId=p.id
+            ORDER BY createTime DESC LIMIT 0,1)
+        )
+        / COUNT(*) * 30 / 70
+        FROM project p,project_group_user pgu
+        WHERE
+        p.projectGroupId=pgu.projectGroupId
+        AND pgu.userId=u.id
+        AND
+        (p.`status`=5008 OR p.`status`=5007 OR p.`status`=5006)
+        AND p.overTime BETWEEN  #{startTime} AND #{endTime}
+        )
+        ,
+        (SELECT
+        SUM(IFNULL(kg.score,0))
+        FROM three_veidoo_kg kg
+        WHERE
+        kg.userId=u.id
+        AND kg.startTime = #{startTime} AND kg.endTime = #{endTime}
+        )
+        )
+        ),0) as kg,
+
+        IFNULL(
+            IF(
+            IFNULL(((sp_duty_ok(#{startTime},u.id) - sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id))
+            / (sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH) ,u.id)* 0.01)
+            ),0) >
+            ((IFNULL(sp_duty_ok(#{startTime},u.id),0) - (SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+            WHERE uu.department_id = dd.id AND dd.companyId = #{companyId} AND uu.Incumbency = 2))
+            /
+            ((SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+            WHERE uu.department_id = dd.id AND dd.companyId = #{companyId} AND uu.Incumbency = 2) * 0.01))
+            ,
+            IFNULL(((sp_duty_ok(#{startTime},u.id) - sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id))
+            / (sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id) * 0.01)
+            ),0)
+            ,
+            ((IFNULL(sp_duty_ok(#{startTime},u.id),0) - (SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+            WHERE uu.department_id = dd.id AND dd.companyId = #{companyId} AND uu.Incumbency = 2))
+            /
+            ((SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+            WHERE uu.department_id = dd.id AND dd.companyId = #{companyId} AND uu.Incumbency = 2) * 0.01))
+        ),0) AS tz,
+        (
+        (SELECT
+        IFNULL(
+        IF ((SUM(UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) >= 8, 4,
+        (4 - (8-(SUM(UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600)) / 2) ),0 )
+        FROM
+        work_diary wd,
+        work_diary_sub wds,
+        job_type jt,
+        transactionsub sb
+        WHERE
+        wd.id = wds.workDiaryId
+        AND wds.jobTypeId = jt.id
+        AND jt.transactionSubId = sb.id
+        AND sb.transactionTypeId = 3
+        AND wd.userId = u.id
+        AND wd.workTime BETWEEN #{startTime} AND #{endTime})
+        +
+        IF(
+            (SELECT
+            IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=6 AND userId=u.id
+            AND  startTime = #{startTime} AND endTime = #{endTime} ),0)) * 0.6 = 0,
+            (SELECT weight FROM three_veidoo WHERE id = 6) * 0.6,
+            (SELECT
+            IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=6 AND userId=u.id
+            AND  startTime = #{startTime} AND endTime = #{endTime} ),0)) * 0.6
+
+        )
+
+        )AS yd,
+
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=3 AND userId=u.id
+        AND startTime = #{startTime} AND endTime = #{endTime}),(SELECT weight FROM three_veidoo WHERE id = 3)) AS hy,
+
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=4 AND userId=u.id
+        AND startTime = #{startTime} AND endTime = #{endTime}),(SELECT weight FROM three_veidoo WHERE id = 4)) AS wx,
+
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=5 AND userId=u.id
+        AND startTime = #{startTime} AND endTime = #{endTime}),(SELECT weight FROM three_veidoo WHERE id = 5)) AS zb,
+        IFNULL((
+        SELECT SUM(IFNULL(score,0)) FROM  three_veidoo_kg WHERE type=1 AND userId=u.id AND startTime = #{startTime} AND endTime = #{endTime}
+        ),0) AS personKCulture,
+        u.id AS userId
+        FROM
+        users u,department d
+        WHERE u.department_id = d.id
+        AND u.role_id NOT IN (1)
+        <if test="userId != null">
+            AND u.id = #{userId}
+        </if>
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+        <if test="ccId != null">
+            AND d.companyId = #{ccId}
+        </if>
+    </select>
+
+
+
+
+
+
+
+
+</mapper>

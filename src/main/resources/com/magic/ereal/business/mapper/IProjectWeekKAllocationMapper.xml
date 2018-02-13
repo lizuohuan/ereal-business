@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IProjectWeekKAllocationMapper" >
+
+
+    <select id="list" resultType="com.magic.ereal.business.entity.ProjectWeekKAllocation">
+        select p.*,u.`name` AS userName,pt.sectionNum
+        from
+        project_week_k_allocation p,
+        project_type_section pt,
+        project_week_acceptance pweek,
+        users u
+        WHERE
+        p.projectTypeSectionId = pt.id
+        AND p.projectWeekAcceptanceId = #{projectWeekAcceptanceId}
+        AND u.id=p.userId
+        AND pweek.id = p.projectWeekAcceptanceId
+    </select>
+
+
+    <select id="list2" resultType="com.magic.ereal.business.entity.ProjectWeekKAllocation">
+        SELECT
+            p.*, u.`name` AS userName,
+            pt.sectionNum,
+            CASE p.userId WHEN pr.aTeacher THEN 0
+                                        WHEN pg.projectManagerId THEN 1
+                                        ELSE 2 END AS `role`
+        FROM
+            project_week_k_allocation p,
+            project_type_section pt,
+            project_week_acceptance pweek,
+            project pr,
+            users u,
+            project_group pg
+        WHERE
+            p.projectTypeSectionId = pt.id
+        AND p.projectWeekAcceptanceId = #{projectWeekAcceptanceId}
+        AND u.id = p.userId
+        AND pweek.id = p.projectWeekAcceptanceId
+        AND pr.id = pweek.projectId
+        AND pg.id = pr.projectGroupId
+    </select>
+
+    <insert id="save" parameterType="com.magic.ereal.business.entity.ProjectWeekKAllocation" >
+        insert into project_week_k_allocation (projectWeekAcceptanceId, projectTypeSectionId,
+        userId, ratio, sectionSumK, createTime, updateTime, createUserId)
+        values (#{projectWeekAcceptanceId},#{projectTypeSectionId},#{userId},#{ratio},#{sectionSumK},now(),now(),#{createUserId})
+    </insert>
+
+    <insert id="batchAddProjectWeekKAllocation">
+        INSERT INTO `project_week_k_allocation`
+        (projectWeekAcceptanceId, projectTypeSectionId,userId, ratio, sectionSumK, createTime, updateTime, createUserId)
+        VALUES
+        <foreach collection="allocations" index="index" item="allocation" separator=",">
+            (#{allocation.projectWeekAcceptanceId},#{allocation.projectTypeSectionId},#{allocation.userId},
+            #{allocation.ratio},#{allocation.sectionSumK},now(),now(),#{allocation.createUserId})
+        </foreach>
+    </insert>
+
+</mapper>

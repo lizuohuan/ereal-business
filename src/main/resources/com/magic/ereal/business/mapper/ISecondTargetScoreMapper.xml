@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.ISecondTargetScoreMapper">
+
+
+
+
+
+    <insert id="addSecondTargetScore">
+        INSERT INTO second_target_score (score,secondTargetId,createTime)
+        VALUES (#{secondTargetScore.score},#{secondTargetScore.secondTargetId},NOW())
+    </insert>
+
+
+    <select id="querySecondTargetScoreBySecondTargetId" resultType="com.magic.ereal.business.entity.SecondTargetScore">
+        SELECT score FROM  second_target_score WHERE secondTargetId = #{secondTargetId} ORDER BY id LIMIT 0,1
+    </select>
+
+
+
+
+
+
+
+
+
+
+
+
+</mapper>

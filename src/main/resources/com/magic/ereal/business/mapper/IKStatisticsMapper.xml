@@ -1,0 +1,1117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IKStatisticsMapper" >
+
+    <select id="getByTimePersonage" resultType="com.magic.ereal.business.entity.KPersonageStatistics">
+        SELECT(
+              SELECT  sp_project_kw(uIds.id,#{startTime},#{endTime})
+            ) AS kw ,
+
+            (
+            IF(
+            (SELECT SUM(p.k) FROM project_interior_week_k_allocation p WHERE p.userId IN (uIds.id) AND
+                          p.createTime BETWEEN #{startTime} AND #{endTime}) IS NULL,0,
+            (SELECT SUM(p.k) FROM project_interior_week_k_allocation p WHERE p.userId IN (uIds.id)  AND
+                          p.createTime BETWEEN #{startTime} AND #{endTime})
+            )
+            ) AS kn
+            <if test="timeType == 1 || timeType == 2">
+                /**计算k常规*/
+               ,  SUM(
+                (SELECT SUM(IFNULL(sp_count_kc(#{userId},#{startTime},#{endTime}),0)))
+                ) AS kc,
+                /**计算k临时*/
+                SUM((SELECT
+                SUM( (UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600 )
+                FROM work_diary wd,work_diary_sub wds,job_type jt,transactionsub sub,users u
+                WHERE
+                wds.workDiaryId=wd.id
+                AND u.id = wd.userId
+                AND jt.id=wds.jobTypeId
+                AND sub.id=jt.transactionSubId
+                AND sub.id=2
+                AND wd.status = 4004
+                AND wd.userId = #{userId} AND wd.workTime BETWEEN #{startTime} AND #{endTime})
+                / (SELECT kHour FROM allconfig) *
+                (IFNULL((SELECT sm.score FROM score_month sm WHERE sm.departmentId = u.department_id
+                AND sm.startTime = #{startTime} AND sm.endTime = #{endTime}
+                AND sm.type = 2),100) / 100)
+                ) as kl
+            </if>
+            <if test="timeType == 2">
+                /**k目标  */
+                ,
+         <!--       ((IFNULL(moDays.days,22) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) -
+                IFNULL(moDays.resignUND,0)) / IFNULL(moDays.days,22) * IFNULL(a.kTarget,1.6)) kmb,-->
+                IFNULL(
+                (IFNULL(a.kTarget,1.6) * (IFNULL(moDays.days,22) - IFNULL(moDays.leaveD,0) -
+                IFNULL(moDays.entryUND,0) -IFNULL( moDays.resignUND,0))
+                / IFNULL(moDays.days,22)) * IFNULL((SELECT sp_zh_xh(u.id,#{startTime},#{endTime})),0)
+                ,0) AS kmb,
+                /**个人转换系数*/
+                ((IFNULL(moDays.practiceD,0) / IFNULL(moDays.days,22) * (IFNULL(u.practiceSalary,0) / IFNULL(a.baseSalary,4100))) +
+                (IFNULL(moDays.days,22) - IFNULL(moDays.practiceD,0) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) *
+                (IFNULL(u.salary,0) / IFNULL(a.baseSalary,4100))) as cr
+            </if>
+        from
+            (SELECT md.days,
+            IF(sum(CASE when mdu.type = 1 then mdu.dayNum end) IS NULL,0,sum(CASE when mdu.type = 1 then mdu.dayNum end)) as leaveD ,/**1：请假天数  */
+            IF(sum(CASE when mdu.type = 2 then mdu.dayNum end) IS NULL,0,sum(CASE when mdu.type = 2 then mdu.dayNum end)) as practiceD ,/**2：本月转正前 上的天数(实习天数)  */
+            IF(sum(CASE when mdu.type = 3 then mdu.dayNum end) IS NULL,0,sum(CASE when mdu.type = 3 then mdu.dayNum end)) as entryUND ,/**3：本月月中入职未上天数  */
+            IF(sum(CASE when mdu.type = 4 then mdu.dayNum end) IS NULL,0,sum(CASE when mdu.type = 4 then mdu.dayNum end)) as resignUND /**4.本月离职后未上的天数*/
+            FROM month_days md LEFT JOIN month_days_user mdu ON md.id = mdu.monthDaysId
+            and mdu.userId = #{userId} WHERE
+            DATE_FORMAT(md.dateTime, '%Y-%m')=DATE_FORMAT(#{startTime},'%Y-%m') ) as moDays,
+            allconfig a ,users u,department d,
+            (SELECT #{userId} AS id ) AS uIds
+        WHERE
+             u.department_id = d.id and
+             u.id = #{userId}
+    </select>
+
+    <select id="getByTimePersonageMap" resultType="com.magic.ereal.business.entity.KPersonageStatistics" >
+        SELECT (
+            SELECT  sp_project_kw(u.id,#{startTime},#{endTime})
+            ) AS kw ,
+            (
+            IFNULL(
+            (SELECT SUM(p.k) FROM project_interior_week_k_allocation p WHERE p.userId = u.id AND
+                          p.createTime BETWEEN #{startTime} AND #{endTime}),0)
+            ) AS kn ,
+        /**计算k常规*/
+          (
+            SELECT SUM(IFNULL(sp_count_kc(u.id,#{startTime},#{endTime}),0))
+          ) AS kc,
+        /**计算k临时*/
+          IFNULL((SELECT
+            (SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600 )  / IFNULL(a.kHour,135) *
+            (IFNULL((SELECT sm.score FROM score_month sm WHERE sm.departmentId = u.department_id
+                    AND sm.startTime = #{startTime} AND sm.endTime = #{endTime}
+                    AND sm.type = 2),100) / 100)) as kls
+            FROM work_diary wd,work_diary_sub wds,job_type jt,transactionsub sub
+            WHERE
+            wds.workDiaryId=wd.id
+            AND jt.id=wds.jobTypeId
+            AND sub.id=jt.transactionSubId
+            AND sub.id=2
+            AND wd.status =  4004
+            AND wd.userId = u.id
+            AND wd.workTime BETWEEN #{startTime} AND #{endTime} GROUP BY wd.userId),0) as kl,
+          u.`name` AS name , d.departmentName AS departmentName
+        FROM users u,department d ,allconfig a
+        WHERE
+        u.department_id = d.id AND
+        u.role_id != 1 AND
+        u.department_id = #{departmentId}
+        group by u.id
+    </select>
+
+    <!--              个人统计 月 年 （统计图）                       -->
+
+    <!-- 统计外部项目的k值 外部结项 内部结项 -->
+    <select id="getPersonageProjectK" resultType="com.magic.ereal.business.entity.ProjectK" >
+      SELECT * FROM project_k p WHERE
+      p.createTime BETWEEN #{startTime} AND #{endTime} AND
+      p.userId = #{userId}
+    </select>
+
+    <!-- 统计外部项目的k值 周验收 -->
+    <select id="getPersonageProjectWeek" resultType="com.magic.ereal.business.entity.ProjectWeekKAllocation" >
+      SELECT * FROM project_week_k_allocation p WHERE
+      p.createTime BETWEEN #{startTime} AND #{endTime} AND
+      p.userId = #{userId}
+    </select>
+
+    <!-- 统计内部项目的k值 周验收 -->
+    <select id="getPersonageProjectInWeek" resultType="com.magic.ereal.business.entity.ProjectInteriorWeekKAllocation" >
+      SELECT * FROM project_interior_week_k_allocation p WHERE
+        p.createTime BETWEEN #{startTime} AND #{endTime} AND
+        p.userId = #{userId}
+    </select>
+    <!-- 统计外部项目的k值 外部结项 内部结项（12个月） -->
+    <select id="getPersonageProjectKMonth" resultType="com.magic.ereal.business.entity.KStatisticsPMonth" >
+        SELECT p.createTime AS monthTime, SUM(p.sumK) AS tk FROM project_k p WHERE
+          p.createTime BETWEEN #{startTime} AND #{endTime} AND
+          p.userId = #{userId}
+          group by DATE_FORMAT(p.createTime,'%Y-%m')
+    </select>
+    <!-- 统计外部项目的k值 周验收（12个月） -->
+    <select id="getPersonageProjectWeekMonth" resultType="com.magic.ereal.business.entity.KStatisticsPMonth" >
+        SELECT p.createTime AS monthTime, SUM(p.sectionSumK * p.ratio / 100) AS tk
+        FROM project_week_k_allocation p WHERE
+        p.createTime BETWEEN #{startTime} AND #{endTime} AND
+        p.userId = #{userId}
+        group by DATE_FORMAT(p.createTime,'%Y-%m')
+    </select>
+    <!-- 统计内部项目的k值 周验收（12个月） -->
+    <select id="getPersonageProjectInWeekMonth" resultType="com.magic.ereal.business.entity.KStatisticsPMonth" >
+        SELECT p.createTime AS monthTime, SUM(p.k) AS tk FROM project_interior_week_k_allocation p WHERE
+        p.createTime BETWEEN #{startTime} AND #{endTime} AND
+        p.userId = #{userId}
+        group by DATE_FORMAT(p.createTime,'%Y-%m')
+    </select>
+
+
+
+
+
+
+
+    <!-- 部门/公司 数据统计 -->
+    <select id="getByTimeDeCom" resultType="com.magic.ereal.business.entity.KDCStatistics">
+        SELECT
+        <if test="timeType == 1 || timeType == 2">
+
+--             (SUM(IFNULL(pwks.wtk,0)) + SUM(IFNULL(pks.pk,0))) kw ,
+            (
+            IF(COUNT(pks.pk) > 0 ,SUM(IFNULL(pks.pk, 0)), SUM(IFNULL(pwks.wtk, 0)))
+            ) kw,
+            SUM(IFNULL(kns.pk,0)) AS kn
+        </if>
+        <if test="timeType == 2">
+            /**k目标  */
+            ,SUM((IFNULL(moDays.days,22) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) -
+            IFNULL(moDays.resignUND,0)) / IFNULL(moDays.days,22) * IFNULL(cfg.kTarget,1.6)) monthKTarget,
+            /**完成率*/
+            /**k外 + k内 + k临时 + k常规*/
+            SUM((IF(pks.pk > 0 ,IFNULL(pks.pk, 0),IFNULL(pwks.wtk, 0) ) + IFNULL(kns.pk,0) + IFNULL(klss.kls,0) + IFNULL(kcgs.kcg,0)) /
+            /**k可比*/
+            (((IFNULL(moDays.days,22) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) /
+            IFNULL(moDays.days,22) * IFNULL(cfg.kTarget,1.6)) *
+            /**个人转换系数*/
+            ((IFNULL(moDays.practiceD,0) / IFNULL(moDays.days,22) * (IFNULL(uss.practiceSalary,0) / IFNULL(cfg.baseSalary,4100))) +
+            (IFNULL(moDays.days,22) - IFNULL(moDays.practiceD,0) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) *
+            (IFNULL(uss.salary,0) / IFNULL(cfg.baseSalary,4100))))) as monthSchedule
+        </if>
+        <if test="timeType == 3">
+            (SUM(IFNULL(pwks.wtk,0)) + SUM(IFNULL(pks.pk,0))) AS yearAllTkw ,
+            SUM(IFNULL(kns.pk,0)) AS yearAllTkn,
+            (SUM(IFNULL(pwksw.wtk,0)) + SUM(IFNULL(pksw.pk,0))) AS yearCompleteTkw ,
+            SUM(IFNULL(knsw.k,0)) AS yearCompleteTkn,
+            /**k外完成率*/
+            SUM((IFNULL(pwks.wtk,0) + IFNULL(pks.pk,0)) /
+            /**k可比*/
+            ((IFNULL(moDays.days,22) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) /
+            IFNULL(moDays.days,22) * IFNULL(cfg.kTarget,1.6)) /
+            /**个人转换系数*/
+            ((IFNULL(moDays.practiceD,0) / IFNULL(moDays.days,22) * (IFNULL(uss.practiceSalary,0) / IFNULL(cfg.baseSalary,4100))) +
+            (IFNULL(moDays.days,22) - IFNULL(moDays.practiceD,0) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) *
+            (IFNULL(uss.salary,0) / IFNULL(cfg.baseSalary,4100)))) as yearKwSchedule,
+            /**k内完成率*/
+            SUM(IFNULL(kns.pk,0) /
+            /**k可比*/
+            ((IFNULL(moDays.days,22) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) /
+            IFNULL(moDays.days,22) * IFNULL(cfg.kTarget,1.6)) /
+            /**个人转换系数*/
+            ((IFNULL(moDays.practiceD,0) / IFNULL(moDays.days,22) * (IFNULL(uss.practiceSalary,0) / IFNULL(cfg.baseSalary,4100))) +
+            (IFNULL(moDays.days,22) - IFNULL(moDays.practiceD,0) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) *
+            (IFNULL(uss.salary,0) / IFNULL(cfg.baseSalary,4100)))) as yearKnSchedule
+        </if>
+        FROM allconfig cfg ,users uss
+        /**  外部项目周验收k值统计 */
+        LEFT JOIN (SELECT SUM(p.sectionSumK * p.ratio / 100) AS wtk,p.userId AS uId
+        FROM project_week_k_allocation p WHERE p.userId AND
+        p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS pwks ON uss.id = pwks.uId
+        /**  外部项目结项k值统计 */
+        LEFT JOIN (SELECT SUM(IF(p.sumK IS NULL,0 ,p.sumK)) AS pk,p.userId AS uId FROM project_k p WHERE
+        p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS pks ON uss.id = pks.uId
+        /**  内部项目k值统计 */
+        LEFT JOIN (SELECT SUM(IFNULL(p.k,0)) AS pk,p.userId AS uId FROM project_interior_week_k_allocation p WHERE
+        p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS kns ON uss.id = kns.uId
+        /** k 临时  已处理*/
+        LEFT JOIN (
+                SELECT
+                (SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600 )) / (SELECT IFNULL(a.kHour,135) FROM allconfig a)
+                *
+                (IFNULL((SELECT sm.score FROM score_month sm WHERE sm.departmentId = uuuuu.department_id
+                AND sm.startTime = #{startTime} AND sm.endTime =  #{endTime}
+                AND sm.type = 2),100) / 100)
+                AS kls,
+                wd.userId AS uId
+                FROM
+                work_diary wd,
+                work_diary_sub wds,
+                transactionsub sb,
+                job_type jt,users uuuuu
+                WHERE
+                wds.workDiaryId = wd.id AND jt.id = wds.jobTypeId AND jt.transactionSubId = sb.id AND sb.id = 2
+                AND wd.`status` = 4004 AND uuuuu.id = wd.userId
+                AND wd.workTime BETWEEN #{startTime} AND  #{endTime}
+                GROUP BY wd.userId ) AS klss ON klss.uId = uss.id
+
+        /** k 常规 已处理*/
+        LEFT JOIN
+            (SELECT (SUM(jt.jobTypeTime) / (SELECT IFNULL(a.kHour,135) FROM allconfig a) *
+            (IFNULL((SELECT sm.score FROM score_month sm WHERE sm.departmentId = u.department_id
+            AND sm.startTime = #{startTime} AND sm.endTime =  #{endTime}
+            AND sm.type = 1),100) / 100)
+            ) as kcg, wd.userId AS uId
+            FROM job_type jt,work_diary wd,work_diary_sub wds ,users u
+            WHERE jt.id = wds.jobTypeId AND
+            jt.transactionSubId = 1 AND
+            wd.id = wds.workDiaryId AND
+            wd.userId = u.id AND
+            wd.status =  4004 AND
+            wd.workTime BETWEEN #{startTime} AND #{endTime} GROUP BY wd.userId
+            )AS kcgs ON kcgs.uId = uss.id
+        /**  外部项目周验收k值统计 （已完结）*/
+        LEFT JOIN (SELECT SUM(IFNULL((p.sectionSumK * p.ratio / 100),0)) AS wtk,p.userId AS uId
+        FROM project_week_k_allocation p ,project pj ,
+        project_week_acceptance pwa
+        WHERE p.projectWeekAcceptanceId = pwa.id AND pj.id = pwa.projectId AND pj.status = 5008 AND
+        p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS pwksw ON pwksw.uId = uss.id
+        /** 外部项目结项k值统计 （已完结）*/
+        LEFT JOIN (SELECT SUM(IFNULL((p.sumK),0)) AS pk,p.userId AS uId
+        FROM project_k p ,project_acceptancerecord pa ,project pj
+        WHERE p.projectRecordId = pa.id AND pj.id = pa.projectId AND
+        p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) pksw ON pksw.uId = uss.id
+        /** 内部项目k值统计 （已完结）*/
+        LEFT JOIN (SELECT SUM(IFNULL((p.k),0)) AS k,p.userId AS uId
+        FROM project_interior_week_k_allocation p,
+        project_interior_week_acceptance piwa , project_interior pi
+        WHERE p.weekId = piwa.id and pi.id = piwa.projectInteriorId AND
+        p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) knsw ON knsw.uId = uss.id
+        /** 计算k目标 k值完成率使用 */
+        LEFT JOIN (SELECT md.days,u.practiceSalary ,u.salary,u.id as uId,
+        IFNULL(SUM(CASE when mdu.type = 1 then mdu.dayNum end) ,0) as leaveD ,/**1：请假天数  */
+        IFNULL(SUM(CASE when mdu.type = 2 then mdu.dayNum end) ,0) as practiceD ,/**2：本月转正前 上的天数(实习天数)  */
+        IFNULL(SUM(CASE when mdu.type = 3 then mdu.dayNum end) ,0) as entryUND ,/**3：本月月中入职未上天数  */
+        IFNULL(SUM(CASE when mdu.type = 4 then mdu.dayNum end) ,0) as resignUND /**4.本月离职后未上的天数*/
+        FROM month_days md LEFT JOIN month_days_user mdu ON md.id = mdu.monthDaysId ,users u
+        where u.id = mdu.userId AND
+        DATE_FORMAT(md.dateTime, '%Y-%m')=DATE_FORMAT(#{startTime},'%Y-%m') GROUP BY u.id) as moDays ON moDays.uId = uss.id
+
+
+        WHERE 1 = 1
+        <if test="type == 1">
+            AND uss.id in (SELECT u.id FROM users u WHERE u.department_id = #{departmentId})
+        </if>
+        <if test="type == 2">
+            AND uss.id in (SELECT u.id FROM users u WHERE u.department_id
+            IN (SELECT d.id FROM department d WHERE d.companyId = #{companyId}))
+        </if>
+    </select>
+
+
+    <!-- 团队统计 柱状图 -->
+    <select id="getByTimeWeekDepartmentMap" resultType="com.magic.ereal.business.entity.KDCStatistics">
+         SELECT (
+
+          IF(
+
+          (IF (
+            (SELECT SUM(p.sumK) AS pk FROM project_k p WHERE p.userId = u.id AND
+                          p.createTime BETWEEN #{startTime} AND #{endTime}) IS NULL,0,
+            (SELECT SUM(p.sumK) AS pk FROM project_k p WHERE p.userId = u.id AND
+                          p.createTime BETWEEN #{startTime} AND #{endTime})
+            )) = 0,
+            IF(
+            (SELECT SUM(pwk.sectionSumK * pwk.ratio / 100) AS wtk
+                FROM project_week_k_allocation pwk WHERE pwk.userId = u.id AND
+                     pwk.createTime BETWEEN #{startTime} AND #{endTime}) IS NULL,0 ,
+            (SELECT SUM(pwk.sectionSumK * pwk.ratio / 100) AS wtk
+                FROM project_week_k_allocation pwk WHERE pwk.userId = u.id AND
+                     pwk.createTime BETWEEN #{startTime} AND #{endTime})
+            ),
+            IF (
+            (SELECT SUM(p.sumK) AS pk FROM project_k p WHERE p.userId = u.id AND
+                          p.createTime BETWEEN #{startTime} AND #{endTime}) IS NULL,0,
+            (SELECT SUM(p.sumK) AS pk FROM project_k p WHERE p.userId = u.id AND
+                          p.createTime BETWEEN #{startTime} AND #{endTime})
+            )
+          ))AS kw ,
+          (
+            IF(
+            (SELECT SUM(p.k) FROM project_interior_week_k_allocation p WHERE p.userId = u.id AND
+                          p.createTime BETWEEN #{startTime} AND #{endTime}) IS NULL,0,
+            (SELECT SUM(p.k) FROM project_interior_week_k_allocation p WHERE p.userId = u.id  AND
+                          p.createTime BETWEEN #{startTime} AND #{endTime})
+            )
+        ) AS kn ,
+          u.`name` AS userName , d.departmentName AS departmentName
+        FROM users u,department d
+        WHERE
+        u.department_id = d.id AND
+        u.department_id = #{departmentId}
+        group by u.id
+    </select>
+
+
+    <!-- 公司统计 柱状图 -->
+    <select id="getByTimeWeekCompanyMap" resultType="com.magic.ereal.business.entity.KDCStatistics">
+         SELECT (
+          SUM(IF(
+            (SELECT SUM(pwk.sectionSumK * pwk.ratio / 100) AS wtk
+                FROM project_week_k_allocation pwk WHERE pwk.userId = u.id AND
+                     pwk.createTime BETWEEN #{startTime} AND #{endTime}) IS NULL,0 ,
+            (SELECT SUM(pwk.sectionSumK * pwk.ratio / 100) AS wtk
+                FROM project_week_k_allocation pwk WHERE pwk.userId = u.id AND
+                     pwk.createTime BETWEEN #{startTime} AND #{endTime})
+            )
+            +
+            IF (
+            (SELECT SUM(p.sumK) AS pk FROM project_k p WHERE p.userId = u.id AND
+                          p.createTime BETWEEN #{startTime} AND #{endTime}) IS NULL,0,
+            (SELECT SUM(p.sumK) AS pk FROM project_k p WHERE p.userId = u.id AND
+                          p.createTime BETWEEN #{startTime} AND #{endTime})
+            ))) AS kw ,
+            (
+            SUM(IF(
+            (SELECT SUM(p.k) FROM project_interior_week_k_allocation p WHERE p.userId = u.id AND
+                          p.createTime BETWEEN #{startTime} AND #{endTime}) IS NULL,0,
+            (SELECT SUM(p.k) FROM project_interior_week_k_allocation p WHERE p.userId = u.id  AND
+                          p.createTime BETWEEN #{startTime} AND #{endTime})
+            ))
+        ) AS kn ,
+          d.departmentName AS departmentName
+        FROM users u,department d
+        WHERE
+        u.department_id = d.id AND
+        d.companyId = #{companyId}
+        GROUP BY d.id
+    </select>
+
+    <!-- 获取外部项目周验收 折线图使用 部门公司 -->
+    <select id="getByTimeProjectWeekKMap" resultType="com.magic.ereal.business.entity.KDCStatisticsMap" >
+        SELECT SUM(IF((p.sectionSumK * p.ratio / 100) IS NULL ,0,
+        (p.sectionSumK * p.ratio / 100))) AS k,p.createTime AS dateTime
+        FROM project_week_k_allocation p ,project pj ,
+        project_week_acceptance pwa
+        WHERE p.projectWeekAcceptanceId = pwa.id AND pj.id = pwa.projectId AND pj.status = 5008 AND
+        p.userId in (SELECT u.id FROM users u WHERE u.department_id
+        IN (SELECT d.id FROM department d WHERE 1 = 1
+        <if test="type == 1">
+           AND u.department_id = #{departmentId}
+        </if>
+        <if test="type == 2">
+          AND d.companyId = #{companyId}
+        </if>
+       ))
+        AND p.createTime BETWEEN #{startTime} AND #{endTime}
+        <if test="timeType == 2">
+            GROUP BY DATE_FORMAT(p.createTime,'%Y-%m-%d')
+        </if>
+        <if test="timeType == 3">
+            GROUP BY DATE_FORMAT(p.createTime,'%Y-%m')
+        </if>
+    </select>
+
+    <!-- 获取外部项目结项k值验收 折线图使用 部门公司 -->
+    <select id="getByTimeProjectKMap" resultType="com.magic.ereal.business.entity.KDCStatisticsMap" >
+        SELECT SUM(IF(p.sumK IS NULL,0 ,p.sumK)) AS k,p.createTime AS dateTime
+        FROM project_k p
+        WHERE p.userId
+        in (SELECT u.id FROM users u WHERE 1 = 1
+        <if test="type == 1">
+            AND u.department_id = #{departmentId}
+        </if>
+        <if test="type == 2">
+            AND u.department_id IN (select d.id from department d where d.companyId =  #{companyId})
+        </if>) AND
+        p.createTime BETWEEN #{startTime} AND #{endTime}
+        <if test="timeType == 2">
+            GROUP BY DATE_FORMAT(p.createTime,'%Y-%m-%d')
+        </if>
+        <if test="timeType == 3">
+            GROUP BY DATE_FORMAT(p.createTime,'%Y-%m')
+        </if>
+    </select>
+
+
+
+
+
+
+    <!-- 获取内部项目周验收 折线图使用 部门公司 -->
+    <select id="getByTimeProjectInMap" resultType="com.magic.ereal.business.entity.KDCStatisticsMap" >
+        SELECT SUM(IF(p.k IS NULL ,0 ,p.k)) AS k,p.createTime AS dateTime
+        FROM project_interior_week_k_allocation p
+        WHERE p.userId
+        in (SELECT u.id FROM users u WHERE 1 = 1
+        <if test="type == 1">
+            AND u.department_id = #{departmentId}
+        </if>
+        <if test="type == 2">
+            AND u.department_id IN (select d.id from department d where d.companyId =  #{companyId})
+        </if>)
+        AND p.createTime BETWEEN #{startTime} AND #{endTime}
+        <if test="timeType == 2">
+            GROUP BY DATE_FORMAT(p.createTime,'%Y-%m-%d')
+        </if>
+        <if test="timeType == 3">
+            GROUP BY DATE_FORMAT(p.createTime,'%Y-%m')
+        </if>
+    </select>
+
+
+
+
+
+    <!-- 部门/公司 数据统计 备用 -->
+    <select id="test" resultType="com.magic.ereal.business.entity.KDCStatistics" >
+          SELECT
+          <if test="timeType == 1 || timeType == 2">
+--               SUM(SUM(IFNULL(pwks.wtk,0)) + SUM(IFNULL(pks.pk,0))) kw ,
+              (
+              IF(COUNT(pks.pk) > 0 ,SUM(IFNULL(pks.pk, 0)), SUM(IFNULL(pwks.wtk, 0)))
+              ) kw,
+              SUM(IFNULL(kns.pk,0)) AS kn
+          </if>
+          <if test="timeType == 2">
+              /**k目标  */
+              ,SUM((IFNULL(moDays.days,22) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) -
+              IFNULL(moDays.resignUND,0)) / IFNULL(moDays.days,22) * IFNULL(cfg.kTarget,1.6)) monthKTarget,
+              /**完成率*/
+              /**k外 + k内 + k临时 + k常规*/
+              SUM(IF(pks.pk > 0 ,IFNULL(pks.pk, 0),IFNULL(pwks.wtk, 0) )+ IFNULL(kns.pk,0) + IFNULL(klss.kls,0) + IFNULL(kcgs.kcg,0)) /
+              /**k可比*/
+              ((IFNULL(moDays.days,22) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) /
+              IFNULL(moDays.days,22) * IFNULL(cfg.kTarget,1.6)) /
+              /**个人转换系数*/
+              ((IFNULL(moDays.practiceD,0) / IFNULL(moDays.days,22) * (IFNULL(uss.practiceSalary,0) / IFNULL(cfg.baseSalary,4100))) +
+              (IFNULL(moDays.days,22) - IFNULL(moDays.practiceD,0) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) *
+              (IFNULL(uss.salary,0) / IFNULL(cfg.baseSalary,4100)))) as monthSchedule
+          </if>
+          <if test="timeType == 3">
+--               (SUM(IFNULL(pwks.wtk,0)) + SUM(IFNULL(pks.pk,0))) AS yearAllTkw ,
+              (IF(COUNT(pks.pk) > 0 ,SUM(IFNULL(pks.pk, 0)), SUM(IFNULL(pwks.wtk, 0)))) AS yearAllTkw ,
+              SUM(IFNULL(kns.pk,0)) AS yearAllTkn,
+              (SUM(IFNULL(pwksw.wtk,0)) + SUM(IFNULL(pksw.pk,0))) AS yearCompleteTkw ,
+              SUM(IFNULL(knsw.k,0)) AS yearCompleteTkn,
+              /**k外完成率*/
+              SUM((IFNULL(pwks.wtk,0) + IFNULL(pks.pk,0)) /
+              /**k可比*/
+              ((IFNULL(moDays.days,22) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) /
+              IFNULL(moDays.days,22) * IFNULL(cfg.kTarget,1.6)) /
+              /**个人转换系数*/
+              ((IFNULL(moDays.practiceD,0) / IFNULL(moDays.days,22) * (IFNULL(uss.practiceSalary,0) / IFNULL(cfg.baseSalary,4100))) +
+              (IFNULL(moDays.days,22) - IFNULL(moDays.practiceD,0) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) *
+              (IFNULL(uss.salary,0) / IFNULL(cfg.baseSalary,4100)))) as yearKwSchedule,
+              /**k内完成率*/
+              SUM(IFNULL(kns.pk,0) /
+              /**k可比*/
+              ((IFNULL(moDays.days,22) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) /
+              IFNULL(moDays.days,22) * IFNULL(cfg.kTarget,1.6)) /
+              /**个人转换系数*/
+              ((IFNULL(moDays.practiceD,0) / IFNULL(moDays.days,22) * (IFNULL(uss.practiceSalary,0) / IFNULL(cfg.baseSalary,4100))) +
+              (IFNULL(moDays.days,22) - IFNULL(moDays.practiceD,0) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) *
+              (IFNULL(uss.salary,0) / IFNULL(cfg.baseSalary,4100)))) as yearKnSchedule
+          </if>
+          FROM allconfig cfg ,users uss
+          /**  外部项目周验收k值统计 */
+          LEFT JOIN (SELECT SUM(p.sectionSumK * p.ratio / 100) AS wtk,p.userId AS uId
+            FROM project_week_k_allocation p WHERE p.userId AND
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS pwks ON uss.id = pwks.uId
+          /**  外部项目结项k值统计 */
+          LEFT JOIN (SELECT SUM(IF(p.sumK IS NULL,0 ,p.sumK)) AS pk,p.userId AS uId FROM project_k p WHERE
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS pks ON uss.id = pks.uId
+          /**  内部项目k值统计 */
+          LEFT JOIN (SELECT SUM(IFNULL(p.k,0)) AS pk,p.userId AS uId FROM project_interior_week_k_allocation p WHERE
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS kns ON uss.id = kns.uId
+          /** k 临时*/
+          LEFT JOIN (SELECT
+                        (SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600 )  / (SELECT IFNULL(a.kHour,135) FROM allconfig a) *
+                        IFNULL(sm.score,100)) as kls,wd.userId AS uId
+                        FROM work_diary wd,work_diary_sub wds,job_type jt,transactionsub sub,
+                        (SELECT sm.score FROM score_month sm WHERE sm.`type`=2 AND sm.dateType = 1
+                        AND sm.`month` BETWEEN #{startTime} AND #{endTime}) as sm
+                        WHERE
+                        wds.workDiaryId=wd.id
+                        AND jt.id=wds.jobTypeId
+                        AND sub.id=jt.transactionSubId
+                        AND sub.id=2
+                        AND wd.status =  4004
+                        AND wd.workTime BETWEEN #{startTime} AND #{endTime} GROUP BY wd.userId) AS klss ON klss.uId = uss.id
+
+          /** k 常规*/
+          LEFT JOIN (SELECT (SUM(jt.jobTypeTime) / (SELECT IFNULL(a.kHour,135) FROM allconfig a) *
+                    (IFNULL(sm.score, 1))) as kcg, wd.userId AS uId
+                    FROM job_type jt,work_diary wd,work_diary_sub wds ,
+                    (SELECT score FROM score_month WHERE `type`=1 AND dateType = 1
+                    AND `month` BETWEEN #{startTime} AND #{endTime}) as sm
+                    WHERE jt.id = wds.jobTypeId AND
+                    jt.transactionSubId = 1 AND
+                    wd.id = wds.workDiaryId AND
+                    wd.status =  4004 AND
+                    wd.workTime BETWEEN #{startTime} AND #{endTime} GROUP BY wd.userId
+                    ) AS kcgs ON kcgs.uId = uss.id
+        /**  外部项目周验收k值统计 （已完结）*/
+          LEFT JOIN (SELECT SUM(IFNULL((p.sectionSumK * p.ratio / 100),0)) AS wtk,p.userId AS uId
+            FROM project_week_k_allocation p ,project pj ,
+              project_week_acceptance pwa
+            WHERE p.projectWeekAcceptanceId = pwa.id AND pj.id = pwa.projectId AND pj.status = 5008 AND
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS pwksw ON pwksw.uId = uss.id
+        /** 外部项目结项k值统计 （已完结）*/
+          LEFT JOIN (SELECT SUM(IFNULL((p.sumK),0)) AS pk,p.userId AS uId
+            FROM project_k p ,project_acceptancerecord pa ,project pj
+            WHERE p.projectRecordId = pa.id AND pj.id = pa.projectId AND
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) pksw ON pksw.uId = uss.id
+        /** 内部项目k值统计 （已完结）*/
+          LEFT JOIN (SELECT SUM(IFNULL((p.k),0)) AS k,p.userId AS uId
+            FROM project_interior_week_k_allocation p,
+                project_interior_week_acceptance piwa , project_interior pi
+            WHERE p.weekId = piwa.id and pi.id = piwa.projectInteriorId AND
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) knsw ON knsw.uId = uss.id
+        /** 计算k目标 k值完成率使用 */
+        LEFT JOIN (SELECT md.days,u.practiceSalary ,u.salary,u.id as uId,
+        IFNULL(SUM(CASE when mdu.type = 1 then mdu.dayNum end) ,0) as leaveD ,/**1：请假天数  */
+        IFNULL(SUM(CASE when mdu.type = 2 then mdu.dayNum end) ,0) as practiceD ,/**2：本月转正前 上的天数(实习天数)  */
+        IFNULL(SUM(CASE when mdu.type = 3 then mdu.dayNum end) ,0) as entryUND ,/**3：本月月中入职未上天数  */
+        IFNULL(SUM(CASE when mdu.type = 4 then mdu.dayNum end) ,0) as resignUND /**4.本月离职后未上的天数*/
+        FROM month_days md LEFT JOIN month_days_user mdu ON md.id = mdu.monthDaysId ,users u
+        where u.id = mdu.userId AND
+        DATE_FORMAT(md.dateTime, '%Y-%m')=DATE_FORMAT(#{startTime},'%Y-%m') GROUP BY u.id) as moDays ON moDays.uId = uss.id
+
+
+        WHERE 1 = 1
+        <if test="type == 1">
+            AND uss.id in (SELECT u.id FROM users u WHERE u.department_id = #{departmentId})
+        </if>
+        <if test="type == 2">
+            AND uss.id in (SELECT u.id FROM users u WHERE u.department_id
+            IN (SELECT d.id FROM department d WHERE d.companyId = #{companyId}))
+        </if>
+    </select>
+
+
+    <!-- 一维统计 -->
+    <select id="oneDimensional" resultType="com.magic.ereal.business.entity.OneStatistics" >
+          SELECT
+              /**k目标  */
+                IFNULL(
+                  (IFNULL(cfg.kTarget,1.6) * (IFNULL(moDays.days,22) - IFNULL(moDays.leaveD,0) -
+                  IFNULL(moDays.entryUND,0) -IFNULL( moDays.resignUND,0))
+                  / IFNULL(moDays.days,22)) * IFNULL((SELECT sp_zh_xh(uss.id,#{startTime},#{endTime})),0)
+                ,0) AS km,
+              IFNULL((SELECT sp_zh_xh(uss.id,#{startTime},#{endTime})),0) AS  zhxh,
+              /**k外  */
+              SUM(IFNULL((SELECT sp_project_kw(uss.id,#{startTime},#{endTime})),0)) AS kw ,
+              /**k内  */
+              SUM(IFNULL(kns.pk,0)) AS kn,
+              /**k临时  */
+              SUM(IFNULL(klss.kls,0) ) AS kl,
+              /**k常规  */
+              SUM(IFNULL(kcgs.kcg,0) ) AS kc,
+              <if test="type == 0 or type = 2">
+                  /**k可比*/
+                  SUM(( (SELECT sp_project_kw(uss.id,#{startTime},#{endTime}))
+                  + IFNULL(kns.pk,0) + IFNULL(klss.kls,0) * (SELECT sp_zh_xh(uss.id,#{startTime},#{endTime})) +
+                  IFNULL(kcgs.kcg,0) * (SELECT sp_zh_xh(uss.id,#{startTime},#{endTime}))) /
+                    (SELECT sp_zh_xh(uss.id,#{startTime},#{endTime}))) AS kk,
+              </if>
+              /**完成率*/
+              /**(k外 + k内 + k临时 + k常规) / (K 可比目标 * 转换系数) */
+              <if test="groupType == 0">
+                  <!-- 个人 -->
+                  SUM((IFNULL((SELECT sp_project_kw(uss.id,#{startTime},#{endTime})),0) + IFNULL(kns.pk,0) + IFNULL(klss.kls,0) + IFNULL(kcgs.kcg,0)) /
+                  /**k可比目标*/
+                  (
+                  ((IFNULL(moDays.days,22) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) /
+                  IFNULL(moDays.days,22) * IFNULL(cfg.kTarget,1.6))
+                  *
+                  /**个人转换系数
+                  * 对于月中转正 换算系数（调整后）=(实习天数*2500/4100+转正天数*3500/4100)/(实习天数+转正天数)
+                  * 转正后 工资 /  4100
+                  */
+                  (
+                      SELECT sp_zh_xh(uss.id,#{startTime},#{endTime})
+                  ))) as kSchedule,
+
+              </if>
+              <if test="groupType == 1">
+                  <!-- 团队的 -->
+                  (SUM((IFNULL(pwks.wtk,0) + IFNULL(pks.pk,0) + IFNULL(kns.pk,0) + IFNULL(klss.kls,0) + IFNULL(kcgs.kcg,0))) /
+                  /**k可比*/
+                  (SUM((uss.salary / IFNULL(cfg.baseSalary,4100))) *
+                  /**个人转换系数*/
+                  SUM((IFNULL(moDays.practiceD,0) / IFNULL(moDays.days,22) * (IFNULL(uss.practiceSalary,0) / IFNULL(cfg.baseSalary,4100))) +
+                  (IFNULL(moDays.days,22) - IFNULL(moDays.practiceD,0) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) *
+                  (IFNULL(uss.salary,0) / IFNULL(cfg.baseSalary,4100))))) as kSchedule,
+
+              </if>
+
+
+              /**k项目完成率*/
+              /**(k外 + k内) / 所有时间段之间的项目初始工作量K*/
+              SUM(((SELECT sp_project_kw(uss.id,#{startTime},#{endTime})) + IFNULL(knsw.k,0)) /
+              /**k可比*/
+
+                (
+                    IFNULL(
+
+                    (
+                    IFNULL((SELECT SUM(p.initWorkload) FROM project p
+                    WHERE   p.allocationTime BETWEEN #{startTime} AND #{endTime} AND  p.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=uss.id)),0)
+                    +
+                    IFNULL((SELECT SUM(pii.initWorkload) FROM project_interior pii
+                    WHERE pii.allocationTime BETWEEN #{startTime} AND #{endTime} AND  pii.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=uss.id)),0)
+                    ) * IFNULL((SELECT dayHour FROM allconfig),8.5) / IFNULL((SELECT kHour FROM allconfig),135)
+                    ,0)
+                )
+
+              ) as kProjectSchedule,
+
+                <if test="groupType == 0">
+                    uss.name AS userName,
+                </if>
+                c.companyName ,c.id AS companyId, d.departmentName ,uss.id AS userId ,d.id AS departmentId
+
+          FROM allconfig cfg ,company c ,department d ,users uss
+          /**  外部项目周验收k值统计 */
+          LEFT JOIN (SELECT SUM(p.sectionSumK * p.ratio / 100) AS wtk,p.userId AS uId
+            FROM project_week_k_allocation p WHERE p.userId AND
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS pwks ON uss.id = pwks.uId
+          /**  外部项目结项k值统计 */
+          LEFT JOIN (SELECT SUM(IF(p.sumK IS NULL,0 ,p.sumK)) AS pk,p.userId AS uId FROM project_k p WHERE
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS pks ON uss.id = pks.uId
+          /**  内部项目k值统计 */
+          LEFT JOIN (SELECT SUM(IFNULL(p.k,0)) AS pk,p.userId AS uId FROM project_interior_week_k_allocation p WHERE
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS kns ON uss.id = kns.uId
+
+            /**  外部项目周验收k值统计 （已完结）*/
+          LEFT JOIN (SELECT SUM(IFNULL((p.sectionSumK * p.ratio / 100),0)) AS wtk,p.userId AS uId
+            FROM project_week_k_allocation p ,project pj ,
+            project_week_acceptance pwa
+            WHERE p.projectWeekAcceptanceId = pwa.id AND pj.id = pwa.projectId AND pj.status = 5008 AND
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS pwksw ON pwksw.uId = uss.id
+
+            /** 外部项目结项k值统计 （已完结）*/
+          LEFT JOIN (SELECT SUM(IFNULL((p.sumK),0)) AS pk,p.userId AS uId
+            FROM project_k p ,project_acceptancerecord pa ,project pj
+            WHERE p.projectRecordId = pa.id AND pj.id = pa.projectId AND
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) pksw ON pksw.uId = uss.id
+
+            /** 内部项目k值统计 （已完结）*/
+          LEFT JOIN (SELECT SUM(IFNULL((p.k),0)) AS k,p.userId AS uId
+            FROM project_interior_week_k_allocation p,
+            project_interior_week_acceptance piwa , project_interior pi
+            WHERE p.weekId = piwa.id and pi.id = piwa.projectInteriorId AND
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) knsw ON knsw.uId = uss.id
+          /** k 临时 已处理*/
+          LEFT JOIN (
+                SELECT
+                (SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600 )) / (SELECT IFNULL(a.kHour,135) FROM allconfig a)
+                *
+                (IFNULL((SELECT sm.score FROM score_month sm WHERE sm.departmentId = uuuuu.department_id
+                AND sm.startTime = #{startTime} AND sm.endTime =  #{endTime}
+                AND sm.type = 2),100) / 100)
+                AS kls,
+                wd.userId AS uId
+                FROM
+                work_diary wd,
+                work_diary_sub wds,
+                transactionsub sb,users uuuuu
+                WHERE
+                wds.workDiaryId = wd.id AND wds.transactionSubId = sb.id AND sb.id = 2
+                AND wd.`status` = 4004 AND uuuuu.id = wd.userId
+                AND wd.workTime BETWEEN #{startTime} AND  #{endTime}
+                GROUP BY wd.userId ) AS klss ON klss.uId = uss.id
+          /** k 常规 已处理*/
+          LEFT JOIN (
+                    SELECT IFNULL(sp_count_kc(u.id,#{startTime},#{endTime}),0) AS kcg,u.id AS uId
+                    FROM users u ,department ddd
+                    WHERE u.department_id = ddd.id AND ddd.companyId = #{companyId}
+                ) AS kcgs ON kcgs.uId = uss.id
+        /** 计算k目标 k值完成率使用 */
+        LEFT JOIN (SELECT md.days,u.practiceSalary ,u.salary,u.id as uId,
+        IFNULL(SUM(CASE when mdu.type = 1 then mdu.dayNum end),0) as leaveD ,/**1：请假天数  */
+        IFNULL(SUM(CASE when mdu.type = 2 then mdu.dayNum end),0) as practiceD ,/**2：本月转正前 上的天数(实习天数)  */
+        IFNULL(SUM(CASE when mdu.type = 3 then mdu.dayNum end),0) as entryUND ,/**3：本月月中入职未上天数  */
+        IFNULL(SUM(CASE when mdu.type = 4 then mdu.dayNum end),0) as resignUND /**4.本月离职后未上的天数*/
+        FROM month_days md LEFT JOIN month_days_user mdu ON md.id = mdu.monthDaysId ,users u
+        where u.id = mdu.userId AND
+        DATE_FORMAT(md.dateTime, '%Y-%m')=DATE_FORMAT(#{startTime},'%Y-%m') GROUP BY u.id) as moDays ON moDays.uId = uss.id
+        WHERE uss.department_id = d.id and c.id = d.companyId
+        AND uss.department_id NOT IN (select us.departmentId from users_statistics us where
+        us.startTime = #{startTime} AND us.endTime = #{endTime} AND us.kwcl is not NULL)
+        AND uss.id not in(select us.userId from users_statistics us where
+        us.startTime = #{startTime} AND us.endTime = #{endTime} AND us.kwcl is not NULL)
+        <if test="type == 0 and userId != null">
+            AND uss.id = #{userId}
+        </if>
+        AND uss.role_id NOT IN (1)
+        AND uss.Incumbency NOT IN (3)
+        <if test="type == 1  and departmentId != null">
+            AND uss.department_id = #{departmentId}
+        </if>
+        <if test="type == 2 and companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        group by
+        <if test="groupType == 0">
+            uss.id
+        </if>
+        <if test="groupType == 1">
+            d.id
+        </if>
+        ORDER BY d.id
+        <if test="pageArgs != null">
+            limit #{pageArgs.pageStart}, #{pageArgs.pageSize}
+        </if>
+    </select>
+
+
+
+    <!-- 一维统计 -->
+    <select id="homeStatistics" resultType="com.magic.ereal.business.entity.OneStatistics" >
+          SELECT
+              /**k目标  */
+                IFNULL(
+                  (IFNULL(cfg.kTarget,1.6) * (IFNULL(moDays.days,22) - IFNULL(moDays.leaveD,0) -
+                  IFNULL(moDays.entryUND,0) -IFNULL( moDays.resignUND,0))
+                  / IFNULL(moDays.days,22)) * IFNULL((SELECT sp_zh_xh(uss.id,#{startTime},#{endTime})),0)
+                ,0) AS km,
+              IFNULL((SELECT sp_zh_xh(uss.id,#{startTime},#{endTime})),0) AS  zhxh,
+              /**k外  */
+              SUM(IFNULL((SELECT sp_project_kw(uss.id,#{startTime},#{endTime})),0)) AS kw ,
+              /**k内  */
+              SUM(IFNULL(kns.pk,0)) AS kn,
+              /**k临时  */
+              SUM(IFNULL(klss.kls,0) ) AS kl,
+              /**k常规  */
+              SUM(IFNULL(kcgs.kcg,0) ) AS kc,
+              <if test="type == 0 or type = 2">
+                  /**k可比*/
+                  SUM(( (SELECT sp_project_kw(uss.id,#{startTime},#{endTime}))
+                  + IFNULL(kns.pk,0) + IFNULL(klss.kls,0) * (SELECT sp_zh_xh(uss.id,#{startTime},#{endTime})) +
+                  IFNULL(kcgs.kcg,0) * (SELECT sp_zh_xh(uss.id,#{startTime},#{endTime}))) /
+                    (SELECT sp_zh_xh(uss.id,#{startTime},#{endTime}))) AS kk,
+              </if>
+              /**完成率*/
+              /**(k外 + k内 + k临时 + k常规) / (K 可比目标 * 转换系数) */
+              <if test="groupType == 0">
+                  <!-- 个人 -->
+                  SUM((IFNULL((SELECT sp_project_kw(uss.id,#{startTime},#{endTime})),0) + IFNULL(kns.pk,0) + IFNULL(klss.kls,0) + IFNULL(kcgs.kcg,0)) /
+                  /**k可比目标*/
+                  (
+                  ((IFNULL(moDays.days,22) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) /
+                  IFNULL(moDays.days,22) * IFNULL(cfg.kTarget,1.6))
+                  *
+                  /**个人转换系数
+                  * 对于月中转正 换算系数（调整后）=(实习天数*2500/4100+转正天数*3500/4100)/(实习天数+转正天数)
+                  * 转正后 工资 /  4100
+                  */
+                  (
+                      SELECT sp_zh_xh(uss.id,#{startTime},#{endTime})
+                  ))) as kSchedule,
+
+              </if>
+              <if test="groupType == 1">
+                  <!-- 团队的 -->
+                  (SUM((IFNULL(pwks.wtk,0) + IFNULL(pks.pk,0) + IFNULL(kns.pk,0) + IFNULL(klss.kls,0) + IFNULL(kcgs.kcg,0))) /
+                  /**k可比*/
+                  (SUM((uss.salary / IFNULL(cfg.baseSalary,4100))) *
+                  /**个人转换系数*/
+                  SUM((IFNULL(moDays.practiceD,0) / IFNULL(moDays.days,22) * (IFNULL(uss.practiceSalary,0) / IFNULL(cfg.baseSalary,4100))) +
+                  (IFNULL(moDays.days,22) - IFNULL(moDays.practiceD,0) - IFNULL(moDays.leaveD,0) - IFNULL(moDays.entryUND,0) - IFNULL(moDays.resignUND,0)) *
+                  (IFNULL(uss.salary,0) / IFNULL(cfg.baseSalary,4100))))) as kSchedule,
+
+              </if>
+
+
+              /**k项目完成率*/
+              /**(k外 + k内) / 所有时间段之间的项目初始工作量K*/
+              SUM(((SELECT sp_project_kw(uss.id,#{startTime},#{endTime})) + IFNULL(knsw.k,0)) /
+              /**k可比*/
+
+                (
+                    IFNULL(
+
+                    (
+                    IFNULL((SELECT SUM(p.initWorkload) FROM project p
+                    WHERE   p.allocationTime BETWEEN #{startTime} AND #{endTime} AND  p.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=uss.id)),0)
+                    +
+                    IFNULL((SELECT SUM(pii.initWorkload) FROM project_interior pii
+                    WHERE pii.allocationTime BETWEEN #{startTime} AND #{endTime} AND  pii.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=uss.id)),0)
+                    ) * IFNULL((SELECT dayHour FROM allconfig),8.5) / IFNULL((SELECT kHour FROM allconfig),135)
+                    ,0)
+                )
+
+              ) as kProjectSchedule,
+
+                <if test="groupType == 0">
+                    uss.name AS userName,
+                </if>
+                c.companyName ,c.id AS companyId, d.departmentName ,uss.id AS userId ,d.id AS departmentId
+
+          FROM allconfig cfg ,company c ,department d ,users uss
+          /**  外部项目周验收k值统计 */
+          LEFT JOIN (SELECT SUM(p.sectionSumK * p.ratio / 100) AS wtk,p.userId AS uId
+            FROM project_week_k_allocation p WHERE p.userId AND
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS pwks ON uss.id = pwks.uId
+          /**  外部项目结项k值统计 */
+          LEFT JOIN (SELECT SUM(IF(p.sumK IS NULL,0 ,p.sumK)) AS pk,p.userId AS uId FROM project_k p WHERE
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS pks ON uss.id = pks.uId
+          /**  内部项目k值统计 */
+          LEFT JOIN (SELECT SUM(IFNULL(p.k,0)) AS pk,p.userId AS uId FROM project_interior_week_k_allocation p WHERE
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS kns ON uss.id = kns.uId
+
+            /**  外部项目周验收k值统计 （已完结）*/
+          LEFT JOIN (SELECT SUM(IFNULL((p.sectionSumK * p.ratio / 100),0)) AS wtk,p.userId AS uId
+            FROM project_week_k_allocation p ,project pj ,
+            project_week_acceptance pwa
+            WHERE p.projectWeekAcceptanceId = pwa.id AND pj.id = pwa.projectId AND pj.status = 5008 AND
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS pwksw ON pwksw.uId = uss.id
+
+            /** 外部项目结项k值统计 （已完结）*/
+          LEFT JOIN (SELECT SUM(IFNULL((p.sumK),0)) AS pk,p.userId AS uId
+            FROM project_k p ,project_acceptancerecord pa ,project pj
+            WHERE p.projectRecordId = pa.id AND pj.id = pa.projectId AND
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) pksw ON pksw.uId = uss.id
+
+            /** 内部项目k值统计 （已完结）*/
+          LEFT JOIN (SELECT SUM(IFNULL((p.k),0)) AS k,p.userId AS uId
+            FROM project_interior_week_k_allocation p,
+            project_interior_week_acceptance piwa , project_interior pi
+            WHERE p.weekId = piwa.id and pi.id = piwa.projectInteriorId AND
+            p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) knsw ON knsw.uId = uss.id
+          /** k 临时 已处理*/
+          LEFT JOIN (
+                SELECT
+                (SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600 )) / (SELECT IFNULL(a.kHour,135) FROM allconfig a)
+                *
+                (IFNULL((SELECT sm.score FROM score_month sm WHERE sm.departmentId = uuuuu.department_id
+                AND sm.startTime = #{startTime} AND sm.endTime =  #{endTime}
+                AND sm.type = 2),100) / 100)
+                AS kls,
+                wd.userId AS uId
+                FROM
+                work_diary wd,
+                work_diary_sub wds,
+                transactionsub sb,users uuuuu
+                WHERE
+                wds.workDiaryId = wd.id AND wds.transactionSubId = sb.id AND sb.id = 2
+                AND wd.`status` = 4004 AND uuuuu.id = wd.userId
+                AND wd.workTime BETWEEN #{startTime} AND  #{endTime}
+                GROUP BY wd.userId ) AS klss ON klss.uId = uss.id
+          /** k 常规 已处理*/
+          LEFT JOIN (
+                    SELECT IFNULL(sp_count_kc(u.id,#{startTime},#{endTime}),0) AS kcg,u.id AS uId
+                    FROM users u ,department ddd
+                    WHERE u.department_id = ddd.id AND ddd.companyId = #{companyId}
+                ) AS kcgs ON kcgs.uId = uss.id
+        /** 计算k目标 k值完成率使用 */
+        LEFT JOIN (SELECT md.days,u.practiceSalary ,u.salary,u.id as uId,
+        IFNULL(SUM(CASE when mdu.type = 1 then mdu.dayNum end),0) as leaveD ,/**1：请假天数  */
+        IFNULL(SUM(CASE when mdu.type = 2 then mdu.dayNum end),0) as practiceD ,/**2：本月转正前 上的天数(实习天数)  */
+        IFNULL(SUM(CASE when mdu.type = 3 then mdu.dayNum end),0) as entryUND ,/**3：本月月中入职未上天数  */
+        IFNULL(SUM(CASE when mdu.type = 4 then mdu.dayNum end),0) as resignUND /**4.本月离职后未上的天数*/
+        FROM month_days md LEFT JOIN month_days_user mdu ON md.id = mdu.monthDaysId ,users u
+        where u.id = mdu.userId AND
+        DATE_FORMAT(md.dateTime, '%Y-%m')=DATE_FORMAT(#{startTime},'%Y-%m') GROUP BY u.id) as moDays ON moDays.uId = uss.id
+        WHERE uss.department_id = d.id and c.id = d.companyId
+        <if test="type == 0 and userId != null">
+            AND uss.id = #{userId}
+        </if>
+        AND uss.role_id NOT IN (1)
+        AND uss.Incumbency NOT IN (3)
+        <if test="type == 1  and departmentId != null">
+            AND uss.department_id = #{departmentId}
+        </if>
+        <if test="type == 2 and companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        group by
+        <if test="groupType == 0">
+            uss.id
+        </if>
+        <if test="groupType == 1">
+            d.id
+        </if>
+        ORDER BY d.id
+        <if test="pageArgs != null">
+            limit #{pageArgs.pageStart}, #{pageArgs.pageSize}
+        </if>
+    </select>
+
+
+
+    <!-- 一维统计 -->
+    <select id="oneDimensionalCount" resultType="object" >
+        SELECT
+        *
+        FROM allconfig cfg ,company c,department d ,users uss
+        /**  外部项目周验收k值统计 */
+        LEFT JOIN (SELECT SUM(p.sectionSumK * p.ratio / 100) AS wtk,p.userId AS uId
+        FROM project_week_k_allocation p WHERE p.userId AND
+        p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS pwks ON uss.id = pwks.uId
+        /**  外部项目结项k值统计 */
+        LEFT JOIN (SELECT SUM(IF(p.sumK IS NULL,0 ,p.sumK)) AS pk,p.userId AS uId FROM project_k p WHERE
+        p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS pks ON uss.id = pks.uId
+        /**  内部项目k值统计 */
+        LEFT JOIN (SELECT SUM(IFNULL(p.k,0)) AS pk,p.userId AS uId FROM project_interior_week_k_allocation p WHERE
+        p.createTime BETWEEN #{startTime} AND #{endTime} GROUP BY p.userId) AS kns ON uss.id = kns.uId
+        /** k 临时*/
+        LEFT JOIN (SELECT
+        (SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600 )  / (SELECT IFNULL(a.kHour,135) FROM allconfig a) *
+        IFNULL(sm.score,100)) as kls,wd.userId AS uId
+        FROM work_diary wd,work_diary_sub wds,job_type jt,transactionsub sub,
+        (SELECT sm.score FROM score_month sm WHERE sm.`type`=2 AND sm.dateType = 1
+        AND sm.`month` BETWEEN #{startTime} AND #{endTime}) as sm
+        WHERE
+        wds.workDiaryId=wd.id
+        AND jt.id=wds.jobTypeId
+        AND sub.id=jt.transactionSubId
+        AND sub.id=2
+        AND wd.status =  4004
+        AND wd.workTime BETWEEN #{startTime} AND #{endTime} GROUP BY wd.userId) AS klss ON klss.uId = uss.id
+
+        /** k 常规*/
+        LEFT JOIN (SELECT (SUM(jt.jobTypeTime) / (SELECT IFNULL(a.kHour,135) FROM allconfig a) *
+        (IFNULL(sm.score, 1))) as kcg, wd.userId AS uId
+        FROM job_type jt,work_diary wd,work_diary_sub wds,
+        (SELECT score FROM score_month WHERE `type`=1 AND dateType = 1
+        AND `month` BETWEEN #{startTime} AND #{endTime}) as sm
+        WHERE jt.id = wds.jobTypeId AND
+        jt.transactionSubId = 1 AND
+        wd.id = wds.workDiaryId AND
+        wd.status =  4004 AND
+        wd.workTime BETWEEN #{startTime} AND #{endTime} GROUP BY wd.userId
+        ) AS kcgs ON kcgs.uId = uss.id
+        /** 计算k目标 k值完成率使用 */
+        LEFT JOIN (SELECT md.days,u.practiceSalary ,u.salary,u.id as uId,
+        IFNULL(SUM(CASE when mdu.type = 1 then mdu.dayNum end),0) as leaveD ,/**1：请假天数  */
+        IFNULL(SUM(CASE when mdu.type = 2 then mdu.dayNum end) ,0) as practiceD ,/**2：本月转正前 上的天数(实习天数)  */
+        IFNULL(SUM(CASE when mdu.type = 3 then mdu.dayNum end),0) as entryUND ,/**3：本月月中入职未上天数  */
+        IFNULL(SUM(CASE when mdu.type = 4 then mdu.dayNum end) ,0) as resignUND /**4.本月离职后未上的天数*/
+        FROM month_days md LEFT JOIN month_days_user mdu ON md.id = mdu.monthDaysId ,users u
+        where u.id = mdu.userId AND
+        DATE_FORMAT(md.dateTime, '%Y-%m')=DATE_FORMAT(#{startTime},'%Y-%m') GROUP BY u.id) as moDays ON moDays.uId = uss.id
+        WHERE uss.department_id = d.id and c.id = d.companyId
+        AND uss.department_id NOT IN (select us.departmentId from users_statistics us where
+        us.startTime = #{startTime} AND us.endTime = #{endTime} AND us.kwcl is not NULL)
+        AND uss.id not in(select us.userId from users_statistics us where
+        us.startTime = #{startTime} AND us.endTime = #{endTime} AND us.kwcl is not NULL)
+        <if test="type == 0 and userId != null">
+            AND uss.id = #{userId}
+        </if>
+        AND uss.account != 'admin'
+        <if test="type == 1 and departmentId != null">
+            AND uss.department_id = #{departmentId}
+        </if>
+        <if test="type == 2 and companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        group by
+        <if test="groupType == 0">
+            uss.id
+        </if>
+        <if test="groupType == 1">
+            d.id
+        </if>
+    </select>
+
+
+
+    <select id="personKk" resultType="com.magic.ereal.business.entity.UserK">
+        SELECT
+        SUM(
+            ((SELECT sp_project_kw(uss.id,#{startTime},#{endTime})) + IFNULL(kns.pk,0) +
+              IFNULL(klss.kls,0) * (SELECT sp_zh_xh(uss.id,#{startTime},#{endTime})) +
+              IFNULL(kcgs.kcg,0) * (SELECT sp_zh_xh(uss.id,#{startTime},#{endTime}))) /
+            ((SELECT sp_zh_xh(uss.id,#{startTime},#{endTime})))
+        ) AS userK,
+        uss.`name`
+        FROM
+        allconfig cfg,
+        company c,
+        department d,
+        users uss
+        LEFT JOIN (
+        SELECT
+        SUM(p.sectionSumK * p.ratio / 100) AS wtk,
+        p.userId AS uId
+        FROM
+        project_week_k_allocation p
+        WHERE
+        p.userId
+        AND p.createTime BETWEEN #{startTime}
+        AND  #{endTime}
+        GROUP BY
+        p.userId
+        ) AS pwks ON uss.id = pwks.uId /** 外部项目结项k值统计 */
+        LEFT JOIN (
+        SELECT
+        SUM(IF(p.sumK IS NULL, 0, p.sumK)) AS pk,
+        p.userId AS uId
+        FROM
+        project_k p
+        WHERE
+        p.createTime BETWEEN #{startTime}
+        AND #{endTime}
+        GROUP BY
+        p.userId
+        ) AS pks ON uss.id = pks.uId
+        /** 内部项目k值统计 */
+        LEFT JOIN (
+        SELECT
+        SUM(IFNULL(p.k, 0)) AS pk,
+        p.userId AS uId
+        FROM
+        project_interior_week_k_allocation p
+        WHERE
+        p.createTime BETWEEN #{startTime}
+        AND #{endTime}
+        GROUP BY
+        p.userId
+        ) AS kns ON uss.id = kns.uId
+        /** k 临时*/
+        LEFT JOIN (
+
+        SELECT
+        (SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600 )  / (SELECT IFNULL(a.kHour,135) FROM allconfig a)
+        * (IFNULL((SELECT sm.score FROM score_month sm WHERE sm.departmentId = uuuuu.department_id
+        AND sm.startTime = #{startTime} AND sm.endTime = #{endTime}
+        AND sm.type = 2),100) / 100)
+        ) as kls,wd.userId AS uId
+
+        FROM work_diary wd,work_diary_sub wds,transactionsub sub,users uuuuu
+        WHERE
+        wds.workDiaryId=wd.id
+        AND sub.id=wds.transactionSubId
+        AND sub.id=2
+        AND wd.`status` =  4004
+        AND wd.userId = uuuuu.id
+        AND wd.workTime BETWEEN #{startTime}
+        AND #{endTime} GROUP BY wd.userId
+
+        ) AS klss ON klss.uId = uss.id
+        /** k 常规*/
+        LEFT JOIN (
+        SELECT IFNULL(sp_count_kc(u.id,#{startTime},#{endTime}),0) AS kcg,u.id AS uId
+        FROM users u ,department ddd
+        WHERE u.department_id = ddd.id AND ddd.companyId = #{companyId}
+        ) AS kcgs ON kcgs.uId = uss.id
+        /** 计算k目标 k值完成率使用 */
+        LEFT JOIN (SELECT md.days,u.practiceSalary ,u.salary,u.id as uId,
+        IFNULL(SUM(CASE when mdu.type = 1 then mdu.dayNum end),0) as leaveD ,/**1：请假天数  */
+        IFNULL(SUM(CASE when mdu.type = 2 then mdu.dayNum end) ,0) as practiceD ,/**2：本月转正前 上的天数(实习天数)  */
+        IFNULL(SUM(CASE when mdu.type = 3 then mdu.dayNum end),0) as entryUND ,/**3：本月月中入职未上天数  */
+        IFNULL(SUM(CASE when mdu.type = 4 then mdu.dayNum end) ,0) as resignUND /**4.本月离职后未上的天数*/
+        FROM month_days md LEFT JOIN month_days_user mdu ON md.id = mdu.monthDaysId ,users u
+        where u.id = mdu.userId AND
+        DATE_FORMAT(md.dateTime, '%Y-%m')=DATE_FORMAT(#{startTime},'%Y-%m') GROUP BY u.id) as moDays ON moDays.uId = uss.id
+        
+        WHERE uss.department_id = d.id and c.id = d.companyId
+        AND uss.role_id NOT IN (1)
+        AND uss.Incumbency NOT IN (3)
+        <if test="userId != null">
+            AND uss.id = #{userId}
+        </if>
+        <if test="departmentId != null">
+            AND uss.department_id = #{departmentId}
+        </if>
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        GROUP BY uss.id
+        ORDER BY userK DESC
+    </select>
+
+
+
+
+
+
+
+</mapper>

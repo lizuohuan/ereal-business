@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.ISystemInfoMapper">
+
+
+
+
+
+    <insert id="addSystemInfo">
+        INSERT INTO `systemInfo`
+        (`userId`,`type`,`content`,`title`,`createTime`)
+        VALUES
+        (#{info.userId},#{info.type},#{info.content},#{info.title},now())
+    </insert>
+
+
+    <insert id="batchAddSystemInfo">
+        INSERT INTO `systemInfo`
+        (`userId`,`type`,`content`,`title`,`createTime`)
+        VALUES
+        <foreach collection="infoList" index="index" item="info" separator=",">
+            (#{info.userId},#{info.type},#{info.content},#{info.title},now())
+        </foreach>
+    </insert>
+
+
+    <select id="queryNewInfoByType" resultType="com.magic.ereal.business.entity.SystemInfo">
+        SELECT
+            s.`id`,
+            s.`userId`,
+            IF(s.`type` = 4,0,s.`type`) AS `type`,
+            s.`content`,
+            s.`title`,
+            s.`createTime`
+        FROM
+            (
+                SELECT
+                    `id`,
+                    `userId`,
+                    IF(`type` = 4,0,`type`) AS `type`,
+                    `content`,
+                    `title`,
+                    `createTime`
+                FROM
+                    systeminfo
+                WHERE
+                    (userId = #{userId} OR (`type` = 3 AND userId = #{userId}))
+                ORDER BY id DESC
+            ) s
+        GROUP BY s.type
+    </select>
+
+
+    <select id="queryInfoByType" resultType="com.magic.ereal.business.entity.SystemInfo">
+        SELECT
+            `id`,
+            `type`,
+            `userId`,
+            `content`,
+            `title`,
+            `createTime`
+        FROM
+            systeminfo
+        WHERE
+          1=1
+          <if test="userId != null">
+              AND userId = #{userId}
+          </if>
+
+          <if test="type == 0 or type == 4">
+              AND (`type` = 0 OR `type`=4)
+          </if>
+          <if test="type != 0 and type != 4" >
+              AND `type` = #{type}
+          </if>
+        ORDER BY
+            `id` DESC
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+    </select>
+
+
+
+
+
+
+
+
+
+
+</mapper>

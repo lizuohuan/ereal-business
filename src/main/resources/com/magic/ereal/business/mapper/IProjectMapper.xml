@@ -1,0 +1,1064 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IProjectMapper" >
+
+    <resultMap id="BaseProject" type="com.magic.ereal.business.entity.Project">
+        <result column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="projectNumber" property="projectNumber" javaType="java.lang.String"/>
+        <result column="projectName" property="projectName" javaType="java.lang.String"/>
+        <result column="projectNameShort" property="projectNameShort" javaType="java.lang.String"/>
+        <result column="projectTypeId" property="projectTypeId" javaType="java.lang.Integer"/>
+        <result column="customerUnit" property="customerUnit" javaType="java.lang.String"/>
+        <result column="customerDepartment" property="customerDepartment" javaType="java.lang.String"/>
+        <result column="receiveTime" property="receiveTime" javaType="java.util.Date"/>
+        <result column="submitTime" property="submitTime" javaType="java.util.Date"/>
+        <result column="customerRemarks" property="customerRemarks" javaType="java.lang.String"/>
+        <result column="riskRemarks" property="riskRemarks" javaType="java.lang.String"/>
+        <result column="otherRemarks" property="otherRemarks" javaType="java.lang.String"/>
+        <result column="createTime" property="createTime" javaType="java.util.Date"/>
+        <result column="updateTime" property="updateTime" javaType="java.util.Date"/>
+        <result column="createUserId" property="createUserId" javaType="java.lang.Integer"/>
+        <result column="allocationTime" property="allocationTime" javaType="java.util.Date"/>
+        <result column="initWorkload" property="initWorkload" javaType="java.lang.Double"/>
+        <result column="departmentId" property="departmentId" javaType="java.lang.Integer"/>
+        <result column="bTeacherId" property="bTeacherId" javaType="java.lang.Integer"/>
+        <result column="cTeacherId" property="cTeacherId" javaType="java.lang.Integer"/>
+        <result column="aTeacher" property="aTeacher" javaType="java.lang.Integer"/>
+        <result column="aTeacherName" property="aTeacherName" javaType="java.lang.String"/>
+        <result column="status" property="status" javaType="java.lang.Integer"/>
+        <result column="orientationRemarks" property="orientationRemarks" javaType="java.lang.String"/>
+        <result column="allocationUserId" property="allocationUserId" javaType="java.lang.Integer"/>
+        <result column="reviewerUserId" property="reviewerUserId" javaType="java.lang.Integer"/>
+        <result column="projectGroupId" property="projectGroupId" javaType="java.lang.Integer"/>
+        <result column="connectStatus" property="connectStatus" javaType="java.lang.Integer"/>
+        <result column="performanceUserId" property="performanceUserId" javaType="java.lang.Integer"/>
+        <result column="reviewerTime" property="reviewerTime" javaType="java.util.Date"/>
+        <result column="exteriorOverTime" property="exteriorOverTime" javaType="java.util.Date"/>
+        <result column="poAllTime" property="poAllTime" javaType="java.util.Date"/>
+        <result column="poHalfTime" property="poHalfTime" javaType="java.util.Date"/>
+        <result column="projectManager" property="projectManager" javaType="java.lang.String"/>
+        <result column="projectTypeName" property="projectTypeName" javaType="java.lang.String"/>
+        <result column="bTeacherName" property="bTeacherName" javaType="java.lang.String"/>
+        <result column="cTeacherName" property="cTeacherName" javaType="java.lang.String"/>
+        <result column="dutyRemarks" property="dutyRemarks" javaType="java.lang.String"/>
+        <result column="departmentName" property="departmentName" javaType="java.lang.String"/>
+        <result column="commissionerName" property="commissionerName" javaType="java.lang.String"/>
+        <result column="useTime" property="useTime" javaType="java.lang.Double"/>
+        <result column="totalK" property="totalK" javaType="java.lang.Double"/>
+        <result column="isValid" property="isValid" javaType="java.lang.Integer"/>
+    </resultMap>
+
+    <!-- 包括周验收数据集合的 联合查询-->
+    <resultMap id="ProjectIncludeWeekAcceptance" type="com.magic.ereal.business.entity.Project" extends="BaseProject">
+        <association property="acceptances" column="id" select="com.magic.ereal.business.mapper.IProjectWeekAcceptanceMapper.queryProjectWeekAcceptanceByProject"/>
+    </resultMap>
+    <!-- 包括 参与该项目所有用户的K值统计 联合查询-->
+    <resultMap id="ProjectIncludeUserK" type="com.magic.ereal.business.entity.Project" extends="ProjectIncludeWeekAcceptance">
+        <association property="userKs" column="id" select="com.magic.ereal.business.mapper.IProjectWeekAcceptanceMapper.queryUserKByProject"/>
+    </resultMap>
+
+    <resultMap id="IncludeProjectType" type="com.magic.ereal.business.entity.Project" extends="ProjectIncludeUserK">
+        <association property="projectType" column="projectTypeId" select="com.magic.ereal.business.mapper.IProjectTypeMapper.queryProjectTypeById"/>
+    </resultMap>
+
+
+    <resultMap id="BaseExportProject" type="com.magic.ereal.business.entity.ExportProject">
+        <result column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="companyName" property="companyName" javaType="java.lang.String"/>
+        <result column="projectTypeName" property="projectTypeName" javaType="java.lang.String"/>
+        <result column="customDepartmentName" property="customDepartmentName" javaType="java.lang.String"/>
+        <result column="projectName" property="projectName" javaType="java.lang.String"/>
+        <result column="projectShortName" property="projectShortName" javaType="java.lang.String"/>
+        <result column="location" property="location" javaType="java.lang.String"/>
+        <result column="departmentName" property="departmentName" javaType="java.lang.String"/>
+        <result column="projectManagerName" property="projectManagerName" javaType="java.lang.String"/>
+        <result column="aTeacherName" property="ATeacherName" javaType="java.lang.String"/>
+        <result column="bTeacherName" property="BTeacherName" javaType="java.lang.String"/>
+        <result column="cTeacherName" property="CTeacherName" javaType="java.lang.String"/>
+        <result column="startTime" property="startTime" javaType="java.util.Date"/>
+        <result column="finishTime" property="finishTime" javaType="java.util.Date"/>
+        <result column="internalProjectDate" property="internalProjectDate" javaType="java.util.Date"/>
+        <result column="poTime" property="poTime" javaType="java.util.Date"/>
+        <result column="initWorkload" property="initWorkload" javaType="java.lang.Integer"/>
+        <result column="initK" property="initK" javaType="java.lang.Double"/>
+        <result column="status" property="status" javaType="java.lang.Integer"/>
+        <result column="poScore" property="poScore" javaType="java.lang.Double"/>
+        <result column="internalProjectScore" property="internalProjectScore" javaType="java.lang.Double"/>
+        <result column="scheduleProject" property="scheduleProject" javaType="java.lang.Double"/>
+        <result column="qualityScore" property="qualityScore" javaType="java.lang.Double"/>
+        <result column="totalK" property="totalK" javaType="java.lang.Double"/>
+        <result column="totalH" property="totalH" javaType="java.lang.Double"/>
+        <result column="totalEfficiency" property="totalEfficiency" javaType="java.lang.Double"/>
+        <association property="sections" column="projectTypeId" select="com.magic.ereal.business.mapper.IProjectTypeSectionMapper.queryProjectTypeSectionByType"/>
+        <association property="exportProjectControlList" column="id" select="com.magic.ereal.business.mapper.IUserMapper.queryExportProjectControl"/>
+        <association property="weekAcceptanceList" column="id" select="com.magic.ereal.business.mapper.IProjectWeekAcceptanceMapper.queryProjectWeekAcceptanceByProject2"/>
+        <association property="projectRecordList" column="id" select="com.magic.ereal.business.mapper.IProjectAcceptanceRecordMapper.queryRecordByProject2"/>
+    </resultMap>
+
+
+    <select id="exportProject" resultMap="BaseExportProject">
+        SELECT
+            p.id,
+            p.customerUnit AS companyName,
+            p.customerDepartment AS customDepartmentName,
+            pt.projectTypeName AS projectTypeName,
+            p.projectName AS projectName,
+            pt.id AS projectTypeId,
+            p.projectNameShort AS projectShortName,
+            p.orientationRemarks AS location,
+            d.departmentName AS departmentName,
+            pm.`name` AS projectManagerName,
+            a.`name` AS aTeacherName,
+            b.`name` AS bTeacherName,
+            c.`name` AS cTeacherName,
+            p.startTime AS startTime,
+            (SELECT pa.createTime FROM project_acceptancerecord pa WHERE pa.projectId = p.id AND pa.`type` = 2 AND pa.`status` = 1) AS finishTime,
+            p.initWorkload AS initWorkload,
+            p.`status` AS `status`,
+            (SELECT pa.score FROM project_acceptancerecord pa WHERE pa.projectId = p.id AND pa.`type` = 0  ORDER BY pa.id DESC LIMIT 0,1) AS poScore,
+            (SELECT pa.createTime FROM project_acceptancerecord pa WHERE pa.projectId = p.id AND pa.`type` = 0  ORDER BY pa.id DESC LIMIT 0,1) AS poTime,
+            (SELECT pa.score FROM project_acceptancerecord pa WHERE pa.projectId = p.id AND pa.`type` = 1 AND pa.`status` = 12 ) AS internalProjectScore,
+            (SELECT pa.createTime FROM project_acceptancerecord pa WHERE pa.projectId = p.id AND pa.`type` = 1 AND pa.`status` = 12 ) AS internalProjectDate,
+            IF(
+                            (SELECT COUNT(0) FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id > 0),
+                            (SELECT score / 100 FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id ORDER BY id DESC LIMIT 0,1)
+                            ,
+                            IFNULL((SELECT SUM(IF(pweek.isAdd = 0,-pweek.sumK,pweek.sumK)) FROM  project_week_acceptance pweek WHERE p.id=pweek.projectId),0)
+                            / (p.initWorkload * (SELECT dayHour FROM allconfig) / (SELECT kHour FROM allconfig))
+                            )
+                            AS scheduleProject,
+            (SELECT pa.score FROM project_acceptancerecord pa WHERE pa.projectId = p.id AND pa.`type` IN (1,2) ORDER BY pa.id DESC LIMIT 0,1 ) AS qualityScore,
+            IFNULL( sp_project_kw_of_projectId(p.id),0 ) AS totalK,
+            (SELECT IFNULL(SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600),0)  FROM work_diary_sub wds,work_diary wd
+                WHERE wds.workDiaryId=wd.id AND wd.`status`=4004 AND wds.jobTypeId = p.id AND wds.transactionSubId = 4) AS totalH,
+            (IFNULL(sp_project_kw_of_projectId(p.id),0))
+                * (SELECT kHour FROM allconfig)
+                / (SELECT IFNULL(SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600),0)  FROM work_diary_sub wds,work_diary wd WHERE wds.workDiaryId=wd.id AND wd.`status`=4004 AND wds.jobTypeId = p.id AND wds.transactionSubId = 4)
+                AS totalEfficiency
+        FROM
+            project p
+        LEFT JOIN project_type pt ON p.projectTypeId = pt.id
+        LEFT JOIN department d ON p.departmentId = d.id
+        LEFT JOIN project_group pg ON pg.id = p.projectGroupId
+        LEFT JOIN users pm ON pm.id = pg.projectManagerId
+        LEFT JOIN users a ON a.id = p.aTeacher
+        LEFT JOIN users b ON b.id = p.bTeacherId
+        LEFT JOIN users c ON c.id = p.cTeacherId
+        WHERE 1=1
+        AND p.isValid = 1
+        <if test="projectGroupId != null">
+            AND p.projectGroupId = #{projectGroupId}
+        </if>
+        <if test="status != null">
+            AND p.`status` = #{status}
+        </if>
+        <if test="departmentId != null">
+            AND p.`departmentId` = #{departmentId}
+        </if>
+        <if test="projectTypeId != null">
+            AND p.`projectTypeId` = #{projectTypeId}
+        </if>
+    </select>
+
+
+    <select id="excelProject" resultType="com.magic.ereal.business.entity.ExcelProject">
+        SELECT
+            p.id AS projectId,
+            p.customerUnit,
+            p.customerDepartment,
+            (SELECT pt.projectTypeName FROM project_type pt WHERE pt.id = p.projectTypeId) AS projectTypeName,
+            p.projectName,p.projectNameShort,p.connectStatus,
+            (SELECT d.departmentName FROM department d WHERE p.departmentId = d.id) AS departmentName,
+            IF(
+                    (SELECT COUNT(*) FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id > 0),
+                    (SELECT score / 100 FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id ORDER BY id DESC LIMIT 0,1)
+                    ,
+                    IFNULL((SELECT SUM(IF(pweek.isAdd = 0,-pweek.sumK,pweek.sumK)) FROM  project_week_acceptance pweek WHERE p.id=pweek.projectId),0)
+                    / (p.initWorkload * (SELECT dayHour FROM allconfig) / (SELECT kHour FROM allconfig))
+                ) AS progress,
+            p.startTime,
+            (SELECT u.`name` FROM project_group pg,users u WHERE u.id=pg.projectManagerId AND pg.id = p.projectGroupId ) AS projectManager,
+            (SELECT u.`name` FROM users u WHERE u.id = p.cTeacherId) AS cTeacherName,
+            p.customerRemarks,
+            p.riskRemarks,
+            p.`status`,
+            (SELECT score FROM project_acceptancerecord pac WHERE pac.type = 0 AND pac.projectId = p.id ORDER BY pac.id DESC LIMIT 0,1) AS poScore,
+            (SELECT createTime FROM project_acceptancerecord pac WHERE pac.type = 0 AND pac.projectId = p.id ORDER BY pac.id DESC LIMIT 0,1) AS poTime,
+            (SELECT score FROM project_acceptancerecord pac WHERE pac.type = 1 AND pac.projectId = p.id ORDER BY pac.id DESC LIMIT 0,1) AS interiorScore,
+            (SELECT createTime FROM project_acceptancerecord pac WHERE pac.type = 1 AND pac.projectId = p.id ORDER BY pac.id DESC LIMIT 0,1) AS interiorTime,
+            (SELECT score FROM project_acceptancerecord pac WHERE pac.type = 2 AND pac.projectId = p.id ORDER BY pac.id DESC LIMIT 0,1) AS exteriorScore,
+            (SELECT createTime FROM project_acceptancerecord pac WHERE pac.type = 2 AND pac.projectId = p.id ORDER BY pac.id DESC LIMIT 0,1) AS exteriorTime
+        FROM
+            project p
+        LEFT JOIN project_group pg ON p.projectGroupId = pg.id
+        LEFT JOIN project_type pt ON p.projectTypeId = pt.id
+        WHERE
+        1=1 AND p.isValid = 1
+        <if test="status != null">
+            AND p.`status`=#{status}
+        </if>
+        <if test="departmentId != null">
+            AND p.`departmentId`=#{departmentId}
+        </if>
+        <if test="projectTypeId != null">
+            AND p.`projectTypeId`=#{projectTypeId}
+        </if>
+        <if test="projectGroupId != null">
+            AND p.`projectGroupId`=#{projectGroupId}
+        </if>
+
+    </select>
+
+
+
+
+
+
+    <delete id="delProject">
+        DELETE FROM project WHERE id = #{projectId}
+    </delete>
+
+    <select id="queryProjectByItem" resultMap="IncludeProjectType">
+        SELECT
+        p.id,p.`status`,p.createUserId,p.projectName,p.projectNameShort,p.departmentId,p.projectGroupId,p.initWorkload,
+        u.`name` AS projectManager,
+        pt.projectTypeName AS projectTypeName,
+        pg.projectName AS  projectGroupName,
+        p.aTeacher,
+        p.isTerminate,
+        (SELECT `departmentName` FROM `department` WHERE  `id`=p.departmentId)
+        AS departmentName,
+        (SELECT `name` FROM `users` WHERE id=p.bTeacherId)  AS bTeacherName,
+        (SELECT `name` FROM `users` WHERE id=p.cTeacherId)  AS cTeacherName,
+
+        (SELECT IFNULL(SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600),0)  FROM work_diary_sub wds,work_diary wd
+        WHERE wds.workDiaryId=wd.id AND wd.`status`=4004 AND wds.jobTypeId = p.id AND wds.transactionSubId = 4) AS useTime,
+
+
+        <!--IF(
+        (SELECT COUNT(*) FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id > 0),
+        (SELECT SUM(IFNULL(badSumK,0)) FROM project_acceptancerecord WHERE  projectId=p.id)
+        ,
+        (IFNULL((SELECT SUM(IF(pweek.isAdd = 0,-pweek.sumK,pweek.sumK)) FROM  project_week_acceptance pweek WHERE p.id=pweek.projectId),0))
+        )
+         因为客户原因 还原外部项目K值计算公式-->
+        IFNULL(
+        sp_project_kw_of_projectId(p.id),0
+        )
+        AS totalK,
+
+        IF(
+        (SELECT COUNT(*) FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id > 0),
+        (SELECT score / 100 FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id ORDER BY id DESC LIMIT 0,1)
+        ,
+        IFNULL((SELECT SUM(IF(pweek.isAdd = 0,-pweek.sumK,pweek.sumK)) FROM  project_week_acceptance pweek WHERE p.id=pweek.projectId),0)
+        / (p.initWorkload * (SELECT dayHour FROM allconfig) / (SELECT kHour FROM allconfig))
+        )
+        AS progress,
+
+
+        <!-- IF(
+        (SELECT COUNT(*) FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id > 0),
+        (SELECT SUM(IFNULL(badSumK,0)) FROM project_acceptancerecord WHERE  projectId=p.id)
+        ,
+        (IFNULL((SELECT SUM(IF(pweek.isAdd = 0,-pweek.sumK,pweek.sumK)) FROM  project_week_acceptance pweek WHERE p.id=pweek.projectId),0))
+        ) 因为客户原因 还原外部项目K值计算公式-->
+        (IFNULL(sp_project_kw_of_projectId(p.id),0))
+        * (SELECT kHour FROM allconfig)
+        / (SELECT IFNULL(SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600),0)  FROM work_diary_sub wds,work_diary wd WHERE wds.workDiaryId=wd.id AND wd.`status`=4004 AND wds.jobTypeId = p.id AND wds.transactionSubId = 4)
+        AS efficiency,
+
+        (
+        IFNULL((SELECT SUM(IF(isAdd = 0,-sumK,sumK)) FROM project_week_acceptance WHERE projectId=p.id AND  isAdd=1 AND updateTime BETWEEN #{startWeek} AND #{endWeek}),
+        0)
+        +
+        IFNULL((SELECT SUM(IFNULL(pa.badSumK,0)) FROM project_acceptancerecord pa
+        WHERE pa.projectId=p.id  AND pa.createTime BETWEEN #{startWeek} AND #{endWeek})
+        ,0)
+        ) AS weekK,
+
+        (
+        IFNULL((SELECT SUM(IF(isAdd = 0,-sumK,sumK)) FROM project_week_acceptance WHERE projectId=p.id AND  isAdd=1 AND updateTime BETWEEN #{startMonth} AND #{endMonth}),
+        0)
+        +
+        IFNULL((SELECT SUM(IFNULL(pa.badSumK,0)) FROM project_acceptancerecord pa
+        WHERE pa.projectId=p.id  AND pa.createTime BETWEEN #{startMonth} AND #{endMonth})
+        ,0)
+        ) AS monthK
+
+        FROM
+            project p
+            LEFT JOIN project_group pg ON p.projectGroupId = pg.id
+            LEFT JOIN users u ON u.id = pg.projectManagerId
+            LEFT JOIN project_type pt ON p.projectTypeId = pt.id
+        WHERE
+        1=1 AND p.isValid = 1
+        <if test="roleId != 13 and roleId != 5 and roleId != 6">
+            <if test="userId != null and roleId != null">
+                AND (
+                    p.cTeacherId = #{userId} OR (p.bTeacherId = #{userId} AND p.connectStatus = 3)
+                    OR (p.aTeacher = #{userId} AND p.connectStatus = 3)
+                    OR (p.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=#{userId}) AND p.connectStatus = 3)
+
+                )
+                <if test="roleId == 9">
+                    <!--如果是市场部经理-->
+                    AND ( p.departmentId in(
+                    select ds.id from department ds where ds.companyId =
+                      (select d.companyId from department d,users us where d.id = us.department_id and us.id = #{userId}))
+                        or p.createUserId = #{userId})
+                </if>
+
+                <if test="roleId != 12 and roleId != 11 and roleId != 7 and roleId != 5 and roleId != 6 and roleId != 9">
+                    AND  (p.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=#{userId})
+                    OR p.connectStatus = 3)
+                </if>
+            </if>
+        </if>
+        <if test="roleId == 13">
+            <!-- 如果是绩效专员 -->
+            AND p.`departmentId` IN ( SELECT dd.id FROM  department dd WHERE  dd.companyId =
+            (SELECT ddd.companyId FROM department ddd,users uu WHERE ddd.id = uu.department_id AND uu.id = #{userId}))
+        </if>
+
+        <if test="status != null">
+            AND p.`status`=#{status}
+        </if>
+        <if test="departmentId != null">
+            AND p.`departmentId`=#{departmentId}
+        </if>
+        <if test="projectTypeId != null">
+            AND p.`projectTypeId`=#{projectTypeId}
+        </if>
+        <!-- 授权用户 外部项目查询条件 -->
+            <!-- OR CASE
+            WHEN (SELECT sp_accredit_roleId(1,#{userId})) = 12 THEN (p.aTeacher = (SELECT sp_accredit_userId(#{userId},1)) OR p.bTeacherId =
+            (SELECT sp_accredit_userId(#{userId},1))) AND p.connectStatus = 3
+            WHEN (SELECT sp_accredit_roleId(1,#{userId})) = 7 THEN p.cTeacherId = (SELECT sp_accredit_userId(#{userId},1))
+            WHEN (SELECT sp_accredit_roleId(1,#{userId})) = 13 THEN  p.`departmentId` IN ( SELECT dd.id FROM  department dd WHERE  dd.companyId =
+                                                            (SELECT ddd.companyId FROM department ddd,users uu WHERE ddd.id = uu.department_id AND uu.id = (SELECT sp_accredit_userId(#{userId},1))))
+            END
+            -->
+        <!--  0:默认排序 1:项目已获总K 排序  2：项目进度 排序 3：当周新增K值 排序 4：当月新增K值 排序 5：项目效率 排序 -->
+        GROUP BY p.id
+        <if test="sortType == 0">
+            ORDER BY p.id DESC
+        </if>
+        <if test="sortType == 1">
+            ORDER BY totalK DESC
+        </if>
+        <if test="sortType == 2">
+            ORDER BY progress DESC
+        </if>
+        <if test="sortType == 3">
+            ORDER BY weekK DESC
+        </if>
+        <if test="sortType == 4">
+            ORDER BY monthK DESC
+        </if>
+        <if test="sortType == 5">
+            ORDER BY efficiency DESC
+        </if>
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+    </select>
+
+
+    <select id="queryProjectByItemForWeb" resultMap="IncludeProjectType">
+        SELECT
+        p.*,
+        u.`name` AS projectManager,
+        pt.projectTypeName AS projectTypeName,
+        pg.projectName AS  projectGroupName,
+        (SELECT `departmentName` FROM `department` WHERE  `id`=p.departmentId)
+        AS departmentName,
+        (SELECT `name` FROM `users` WHERE id=p.bTeacherId)  AS bTeacherName,
+        (SELECT `name` FROM `users` WHERE id=p.cTeacherId)  AS cTeacherName,
+        (SELECT IFNULL(SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600),0)  FROM work_diary_sub wds,work_diary wd
+        WHERE wds.workDiaryId=wd.id AND wd.`status`=4004 AND wds.jobTypeId = p.id AND wds.transactionSubId = 4) AS useTime,
+
+        <!-- IF(
+        (SELECT COUNT(*) FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id > 0),
+        (SELECT SUM(IFNULL(badSumK,0)) FROM project_acceptancerecord WHERE  projectId=p.id)
+        ,
+        (IFNULL((SELECT SUM(IF(pweek.isAdd = 0,-pweek.sumK,pweek.sumK)) FROM  project_week_acceptance pweek WHERE p.id=pweek.projectId),0))
+        ) 因为客户原因 还原外部项目K值计算公式 -->
+        (IFNULL(sp_project_kw_of_projectId(p.id),0))
+        AS totalK,
+
+        IF(
+        (SELECT COUNT(*) FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id > 0),
+        (SELECT score / 100 FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id ORDER BY id DESC LIMIT 0,1)
+        ,
+        IFNULL((SELECT SUM(IF(pweek.isAdd = 0,-pweek.sumK,pweek.sumK)) FROM  project_week_acceptance pweek WHERE p.id=pweek.projectId),0)
+        / (p.initWorkload * (SELECT dayHour FROM allconfig) / (SELECT kHour FROM allconfig))
+        )
+        AS progress,
+
+
+        <!-- IF(
+        (SELECT COUNT(*) FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id > 0),
+        (SELECT SUM(IFNULL(badSumK,0)) FROM project_acceptancerecord WHERE  projectId=p.id)
+        ,
+        (IFNULL((SELECT SUM(IF(pweek.isAdd = 0,-pweek.sumK,pweek.sumK)) FROM  project_week_acceptance pweek WHERE p.id=pweek.projectId),0))
+        ) 因为客户原因 还原外部项目K值计算公式-->
+        (IFNULL(sp_project_kw_of_projectId(p.id),0))
+        * (SELECT kHour FROM allconfig)
+        / (SELECT IFNULL(SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600),0)  FROM work_diary_sub wds,work_diary wd WHERE wds.workDiaryId=wd.id AND wd.`status`=4004 AND wds.jobTypeId = p.id AND wds.transactionSubId = 4)
+        AS efficiency
+        FROM
+        project p
+        LEFT JOIN project_group pg ON p.projectGroupId = pg.id
+        LEFT JOIN users u ON u.id = pg.projectManagerId
+        LEFT JOIN project_type pt ON p.projectTypeId = pt.id
+        WHERE
+        1=1 AND p.isValid = 1
+        <if test="roleId != 13 and roleId != 1  and roleId != 2 and roleId != 3 and roleId != 4 and roleId != 5 and roleId != 6">
+            <if test="userId != null and roleId != null">
+                AND (
+                p.cTeacherId = #{userId} OR (p.bTeacherId = #{userId} AND p.connectStatus = 3)
+                OR (p.aTeacher = #{userId} AND p.connectStatus = 3)
+                OR (p.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=#{userId}) AND p.connectStatus = 3)
+
+                )
+                <if test="roleId == 9">
+                    <!--如果是市场部经理-->
+                    AND ( p.departmentId in(
+                    select ds.id from department ds where ds.companyId =
+                    (select d.companyId from department d,users us where d.id = us.department_id and us.id = #{userId}))
+                    or p.createUserId = #{userId})
+                </if>
+
+                <if test="roleId != 12 and roleId != 11 and roleId != 7 and roleId != 5 and roleId != 6 and roleId != 9">
+                    AND  (p.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=#{userId})
+                    OR p.connectStatus = 3)
+                </if>
+            </if>
+        </if>
+        <if test="roleId == 13">
+            <!-- 如果是绩效专员 -->
+            AND p.`departmentId` IN ( SELECT dd.id FROM  department dd WHERE  dd.companyId =
+            (SELECT ddd.companyId FROM department ddd,users uu WHERE ddd.id = uu.department_id AND uu.id = #{userId}))
+        </if>
+
+        <if test="roleId == 14">
+            <!-- 如果是一般员工 -->
+            AND ((p.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=#{userId}))
+                  OR (p.aTeacher = #{userId} OR p.bTeacherId = #{userId})
+                  OR (p.cTeacherId = #{userId}))
+        </if>
+
+        <if test="status != null">
+            AND p.`status`=#{status}
+        </if>
+        <if test="departmentId != null">
+            AND p.`departmentId`=#{departmentId}
+        </if>
+        <if test="projectTypeId != null">
+            AND p.`projectTypeId`=#{projectTypeId}
+        </if>
+        <if test="isTerminate != null">
+            AND p.`isTerminate`=#{isTerminate}
+        </if>
+        <if test="projectNumber != null">
+            AND p.`projectNumber` like '%${projectNumber}%'
+        </if>
+        <if test="projectName != null">
+            AND p.`projectName` like '%${projectName}%'
+        </if>
+        <if test="projectGroupId != null">
+            AND p.`projectGroupId`=#{projectGroupId}
+        </if>
+        <if test="isManagerId != null">
+            AND pg.`projectManagerId`=#{isManagerId}
+        </if>
+        GROUP BY p.id
+        ORDER BY p.id DESC
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+    </select>
+
+
+    <select id="countProjectByItemForWeb" resultType="java.lang.Integer">
+        SELECT
+        COUNT(DISTINCT p.id)
+        FROM
+        project p
+        LEFT JOIN project_group pg ON p.projectGroupId = pg.id
+        LEFT JOIN users u ON u.id = pg.projectManagerId
+        LEFT JOIN project_type pt ON p.projectTypeId = pt.id
+        WHERE
+        1=1 AND p.isValid = 1
+        <if test="roleId != 13 and roleId != 1  and roleId != 2 and roleId != 3 and roleId != 4 and roleId != 5 and roleId != 6">
+            <if test="userId != null and roleId != null">
+                AND (
+                p.cTeacherId = #{userId} OR (p.bTeacherId = #{userId} AND p.connectStatus = 3)
+                OR (p.aTeacher = #{userId} AND p.connectStatus = 3)
+                OR (p.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=#{userId}) AND p.connectStatus = 3)
+
+                )
+                <if test="roleId == 9">
+                    <!--如果是市场部经理-->
+                    AND ( p.departmentId in(
+                    select ds.id from department ds where ds.companyId =
+                    (select d.companyId from department d,users us where d.id = us.department_id and us.id = #{userId}))
+                    or p.createUserId = #{userId})
+                </if>
+
+                <if test="roleId != 12 and roleId != 11 and roleId != 7 and roleId != 5 and roleId != 6 and roleId != 9">
+                    AND  (p.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=#{userId})
+                    OR p.connectStatus = 3)
+                </if>
+            </if>
+        </if>
+        <if test="roleId == 13">
+            <!-- 如果是绩效专员 -->
+            AND p.`departmentId` IN ( SELECT dd.id FROM  department dd WHERE  dd.companyId =
+            (SELECT ddd.companyId FROM department ddd,users uu WHERE ddd.id = uu.department_id AND uu.id = #{userId}))
+        </if>
+        <if test="roleId == 14">
+            <!-- 如果是一般员工 -->
+            AND ((p.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=#{userId}))
+            OR (p.aTeacher = #{userId} OR p.bTeacherId = #{userId})
+            OR (p.cTeacherId = #{userId}))
+        </if>
+        <if test="status != null">
+            AND p.`status`=#{status}
+        </if>
+        <if test="departmentId != null">
+            AND p.`departmentId`=#{departmentId}
+        </if>
+        <if test="projectTypeId != null">
+            AND p.`projectTypeId`=#{projectTypeId}
+        </if>
+        <if test="isTerminate != null">
+            AND p.`isTerminate`=#{isTerminate}
+        </if>
+        <if test="projectNumber != null">
+            AND p.`projectNumber` like '%${projectNumber}%'
+        </if>
+        <if test="projectName != null">
+            AND p.`projectName` like '%${projectName}%'
+        </if>
+        <if test="projectGroupId != null">
+            AND p.`projectGroupId`=#{projectGroupId}
+        </if>
+        <if test="isManagerId != null">
+            AND pg.`projectManagerId`=#{isManagerId}
+        </if>
+
+
+    </select>
+
+    <select id="queryBaseProjectById" resultMap="BaseProject">
+        SELECT * FROM `project`
+        WHERE `id`=#{id}
+    </select>
+
+    <select id="queryProjectById" resultMap="IncludeProjectType">
+        SELECT
+            p.*, u.`name` AS projectManager,
+            pt.projectTypeName AS projectTypeName,
+            p.isTerminate,
+            (SELECT `departmentName` FROM `department` WHERE  `id`=p.departmentId)
+                AS departmentName,
+            (SELECT `name` FROM `users` WHERE id=p.bTeacherId)  AS bTeacherName,
+            (SELECT `name` FROM `users` WHERE id=p.cTeacherId)  AS cTeacherName,
+            (SELECT `name` FROM `users` WHERE id=p.aTeacher)  AS aTeacherName,
+            IFNULL((SELECT `name` FROM `users` WHERE id=p.performanceUserId),'绩效专员')  AS commissionerName,
+
+              (SELECT IFNULL(SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600),0)  FROM work_diary_sub wds, work_diary wd
+                WHERE wd.id=wds.workDiaryId AND wd.`status`=4004 AND wds.jobTypeId = p.id AND wds.transactionSubId = 4)
+              AS useTime,
+                (IFNULL(sp_project_kw_of_projectId(p.id),0))
+                * (SELECT kHour FROM allconfig)
+                / (SELECT IFNULL(SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600),0)  FROM work_diary_sub wds,work_diary wd WHERE wds.workDiaryId=wd.id AND wd.`status`=4004 AND wds.jobTypeId = p.id AND wds.transactionSubId = 4 )
+            AS efficiency
+        FROM
+            project p LEFT JOIN project_group pg ON p.projectGroupId = pg.id
+            LEFT JOIN users u ON u.id = pg.projectManagerId
+            LEFT JOIN project_type pt ON p.projectTypeId = pt.id
+
+        WHERE
+         p.id = #{id}
+    </select>
+
+    <update id="updateProject">
+        UPDATE `project`
+        <set>
+            <if test="project.isValid  != null">
+                `isValid`=#{project.isValid},
+            </if>
+            <if test="project.isTerminate != null">
+                `isTerminate`=#{project.isTerminate},
+            </if>
+            <if test="project.exteriorOverTime != null">
+                `exteriorOverTime`=#{project.exteriorOverTime},
+            </if>
+            <if test="project.startTime != null">
+                `startTime`=#{project.startTime},
+            </if>
+            <if test="project.performanceUserId != null">
+                `performanceUserId`=#{project.performanceUserId},
+            </if>
+            <if test="project.overTime != null">
+                `overTime`=#{project.overTime},
+            </if>
+            <if test="project.dutyRemarks != null">
+                `dutyRemarks`=#{project.dutyRemarks},
+            </if>
+            <if test="project.aTeacher != null">
+                `aTeacher`=#{project.aTeacher},
+            </if>
+            <if test="project.projectGroupId != null">
+                `projectGroupId`=#{project.projectGroupId},
+            </if>
+            <if test="project.reviewerTime != null">
+                `reviewerTime`=#{project.reviewerTime},
+            </if>
+            <if test="project.reviewerUserId != null">
+                `reviewerUserId`=#{project.reviewerUserId},
+            </if>
+            <if test="project.allocationUserId != null">
+                `allocationUserId`=#{project.allocationUserId},
+            </if>
+            <if test="project.orientationRemarks != null">
+                `orientationRemarks`=#{project.orientationRemarks},
+            </if>
+            <if test="project.status != null">
+                `status`=#{project.status},
+            </if>
+            <if test="project.cTeacherId != null">
+                `cTeacherId`=#{project.cTeacherId},
+            </if>
+            <if test="project.bTeacherId != null">
+                `bTeacherId`=#{project.bTeacherId},
+            </if>
+            <if test="project.departmentId != null">
+                `departmentId`=#{project.departmentId},
+            </if>
+            <if test="project.initWorkload != null">
+                `initWorkload`=#{project.initWorkload},
+            </if>
+            <if test="project.allocationTime != null">
+                `allocationTime`=#{project.allocationTime},
+            </if>
+            <if test="project.updateTime != null">
+                `updateTime`=#{project.updateTime},
+            </if>
+            <if test="project.otherRemarks != null">
+                `otherRemarks`=#{project.otherRemarks},
+            </if>
+            <if test="project.riskRemarks != null">
+                `riskRemarks`=#{project.riskRemarks},
+            </if>
+            <if test="project.customerRemarks != null">
+                `customerRemarks`=#{project.customerRemarks},
+            </if>
+            <if test="project.submitTime != null">
+                `submitTime`=#{project.submitTime},
+            </if>
+            <if test="project.receiveTime != null">
+                `receiveTime`=#{project.receiveTime},
+            </if>
+            <if test="project.customerDepartment != null">
+                `customerDepartment`=#{project.customerDepartment},
+            </if>
+            <if test="project.poHalfTime != null">
+                `poHalfTime`=#{project.poHalfTime},
+            </if>
+            <if test="project.poAllTime != null">
+                `poAllTime`=#{project.poAllTime},
+            </if>
+            <if test="project.customerUnit != null">
+                `customerUnit`=#{project.customerUnit},
+            </if>
+            <if test="project.projectTypeId != null">
+                `projectTypeId`=#{project.projectTypeId},
+            </if>
+            <if test="project.projectNameShort != null">
+                `projectNameShort`=#{project.projectNameShort},
+            </if>
+            <if test="project.projectName != null">
+                `projectName`=#{project.projectName},
+            </if>
+            <if test="project.projectNumber != null">
+                `projectNumber`=#{project.projectNumber},
+            </if>
+            <if test="project.connectStatus != null">
+                `connectStatus`=#{project.connectStatus},
+            </if>
+        </set>
+        WHERE `id`=#{project.id}
+    </update>
+
+    <insert id="addProject" useGeneratedKeys="true" keyProperty="project.id">
+        INSERT INTO `project`
+        (`projectNumber`,`projectName`,`projectNameShort`,`projectTypeId`,`customerUnit`,`customerDepartment`,
+        `receiveTime`,`submitTime`,`customerRemarks`,`riskRemarks`,`otherRemarks`,`createTime`,`createUserId`,`updateTime`,`connectStatus`,
+        dutyRemarks,`poAllTime`,`poHalfTime`,isValid)
+        VALUES
+        (#{project.projectNumber},#{project.projectName},#{project.projectNameShort},#{project.projectTypeId}
+        ,#{project.customerUnit},#{project.customerDepartment},#{project.receiveTime},#{project.submitTime}
+        ,#{project.customerRemarks},#{project.riskRemarks},#{project.otherRemarks},now(),#{project.createUserId},
+        now(),-1,#{project.dutyRemarks},#{project.poAllTime},#{project.poHalfTime},1)
+    </insert>
+
+    <insert id="batchAddProject">
+        INSERT INTO `project`
+        (`projectNumber`,`projectName`,`projectNameShort`,`projectTypeId`,`customerUnit`,`customerDepartment`,
+        `receiveTime`,`submitTime`,`customerRemarks`,`riskRemarks`,`otherRemarks`,`createTime`,`createUserId`,`updateTime`,`connectStatus`,
+        dutyRemarks,`poAllTime`,`poHalfTime`,isValid)
+        VALUES
+        <foreach collection="projects" index="index" item="project" separator=",">
+            (#{project.projectNumber},#{project.projectName},#{project.projectNameShort},#{project.projectTypeId}
+            ,#{project.customerUnit},#{project.customerDepartment},#{project.receiveTime},#{project.submitTime}
+            ,#{project.customerRemarks},#{project.riskRemarks},#{project.otherRemarks},now(),#{project.createUserId},
+            now(),-1,#{project.dutyRemarks},#{project.poAllTime},#{project.poHalfTime},1)
+        </foreach>
+    </insert>
+
+    <!-- 批量通过内部验收 -->
+    <update id="updateListStatus" parameterType="list">
+        <foreach collection="list" item="p" separator=";">
+            update project set status = #{p.status},overTime = #{p.overTime} where id = #{p.id}
+        </foreach>
+    </update>
+
+    <select id="getByIds" resultMap="BaseProject" >
+        select * from project p
+        WHERE p.id IN (
+        <foreach collection="ids" separator="," item="id">
+            #{id}
+        </foreach>
+        )
+    </select>
+
+
+    <select id="getAuditProject" resultMap="ProjectIncludeUserK">
+        SELECT
+
+        p.id,p.`status`,p.createUserId,p.projectName,p.projectNameShort,p.departmentId,p.projectGroupId,
+        p.isTerminate,
+        u.`name` AS projectManager,
+        pt.projectTypeName AS projectTypeName,
+        pg.projectName AS  projectGroupName,
+        (SELECT `departmentName` FROM `department` WHERE  `id`=p.departmentId)
+        AS departmentName,
+        (SELECT `name` FROM `users` WHERE id=p.bTeacherId)  AS bTeacherName,
+        (SELECT `name` FROM `users` WHERE id=p.cTeacherId)  AS cTeacherName,
+        (SELECT IFNULL(SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600),0)  FROM work_diary_sub wds,work_diary wd
+        WHERE wds.workDiaryId=wd.id AND wd.`status`=4004 AND wds.jobTypeId = p.id AND wds.transactionSubId = 4)
+        AS useTime,
+        <!-- IF(
+        (SELECT COUNT(*) FROM project_acceptancerecord WHERE (`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2)) AND projectId=p.id > 0),
+        (SELECT SUM(IFNULL(badSumK,0)) FROM project_acceptancerecord WHERE  projectId=p.id)
+        ,
+        (IFNULL((SELECT SUM(IF(pweek.isAdd = 0,-pweek.sumK,pweek.sumK)) FROM  project_week_acceptance pweek WHERE p.id=pweek.projectId),0))
+        ) 客户原因修改K值-->
+        IFNULL(
+        sp_project_kw_of_projectId(p.id),0
+        )
+        AS totalK,
+
+        IF(
+        (SELECT COUNT(*) FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id > 0),
+        (SELECT score / 100 FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id ORDER BY id DESC LIMIT 0,1)
+        ,
+        IFNULL((SELECT SUM(IF(pweek.isAdd = 0,-pweek.sumK,pweek.sumK)) FROM  project_week_acceptance pweek WHERE p.id=pweek.projectId),0)
+        / (p.initWorkload * (SELECT dayHour FROM allconfig) / (SELECT kHour FROM allconfig))
+        )
+        AS progress,
+
+--         IF(
+--         (SELECT COUNT(*) FROM project_acceptancerecord WHERE (`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2)) AND projectId=p.id > 0),
+--         (SELECT SUM(IFNULL(badSumK,0)) FROM project_acceptancerecord WHERE  projectId=p.id)
+--         ,
+--         (IFNULL((SELECT SUM(IF(pweek.isAdd = 0,-pweek.sumK,pweek.sumK)) FROM  project_week_acceptance pweek WHERE p.id=pweek.projectId),0))
+--         )
+        (IFNULL(sp_project_kw_of_projectId(p.id),0))
+        * (SELECT kHour FROM allconfig)
+        / (SELECT IFNULL(SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600),0)  FROM work_diary_sub wds,work_diary wd WHERE wds.workDiaryId=wd.id AND wd.`status`=4004 AND wds.jobTypeId = p.id AND wds.transactionSubId = 4)
+        AS efficiency,
+
+        (
+        IFNULL((SELECT SUM(IF(isAdd = 0,sumK,sumK)) FROM project_week_acceptance WHERE projectId=p.id AND  isAdd=1 AND updateTime BETWEEN #{startWeek} AND #{endWeek}),
+        0)
+        +
+        IFNULL((SELECT SUM(IFNULL(pa.badSumK,0)) FROM project_acceptancerecord pa
+        WHERE pa.projectId=p.id  AND pa.createTime BETWEEN #{startWeek} AND #{endWeek})
+        ,0)
+        ) AS weekK,
+
+        (
+        IFNULL((SELECT SUM(IF(isAdd = 0,sumK,sumK)) FROM project_week_acceptance WHERE projectId=p.id AND  isAdd=1 AND updateTime BETWEEN #{startMonth} AND #{endMonth}),
+        0)
+        +
+        IFNULL((SELECT SUM(IFNULL(pa.badSumK,0)) FROM project_acceptancerecord pa
+        WHERE pa.projectId=p.id  AND pa.createTime BETWEEN #{startMonth} AND #{endMonth})
+        ,0)
+        ) AS monthK
+
+        FROM project p
+        LEFT JOIN project_acceptancerecord pa ON p.id = pa.projectId
+        LEFT JOIN project_group pg ON p.projectGroupId = pg.id
+        LEFT JOIN users u ON u.id = pg.projectManagerId
+        LEFT JOIN project_type pt ON p.projectTypeId = pt.id
+        WHERE 1=1 AND p.isValid = 1
+          AND CASE #{userId}
+            WHEN p.cTeacherId
+              THEN
+                p.`status` = 5005
+                AND pa.`status` = 11
+                AND pa.score >= 70
+                AND p.cTeacherId = #{userId}
+            WHEN p.bTeacherId
+              THEN
+                p.`status` = 5005
+                AND pa.`status` = 10
+                AND p.bTeacherId = #{userId}
+            WHEN p.createUserId
+              THEN
+                p.`status` = 5007
+                AND p.createUserId = #{userId}
+            ELSE
+                p.`status` = 6000
+            END
+            <!--<if test="roleId == 7">-->
+                <!--&lt;!&ndash; 如果是C导师 &ndash;&gt;-->
+                <!--AND p.`status` = 5005-->
+                <!--AND pa.`status` = 11-->
+                <!--AND pa.score >= 70-->
+                <!--AND p.cTeacherId = #{userId}-->
+            <!--</if>-->
+            <!--<if test="roleId == 12">-->
+                <!--&lt;!&ndash; 如果是B导师 &ndash;&gt;-->
+                <!--AND p.`status` = 5005-->
+                <!--AND pa.`status` = 10-->
+                <!--AND p.bTeacherId = #{userId}-->
+            <!--</if>-->
+            <!--<if test="roleId == 13">-->
+                <!--&lt;!&ndash; 如果是绩效专员 &ndash;&gt;-->
+                <!--AND p.`status` = 5007-->
+                <!--AND p.createUserId = #{userId}-->
+            <!--</if>-->
+            <!--<if test="roleId != 7 and roleId != 12 and roleId != 13">-->
+                <!--AND  p.`status` = 6000-->
+            <!--</if>-->
+            <if test="departmentId != null">
+                AND p.`departmentId`=#{departmentId}
+            </if>
+            <if test="projectTypeId != null">
+                AND p.`projectTypeId`=#{projectTypeId}
+            </if>
+            <!--  0:默认排序 1:项目已获总K 排序  2：项目进度 排序 3：当周新增K值 排序 4：当月新增K值 排序 5：项目效率 排序 -->
+            <if test="sortType == 0">
+                ORDER BY p.id DESC
+            </if>
+            <if test="sortType == 1">
+                ORDER BY totalK DESC
+            </if>
+            <if test="sortType == 2">
+                ORDER BY progress DESC
+            </if>
+            <if test="sortType == 3">
+                ORDER BY weekK DESC
+            </if>
+            <if test="sortType == 4">
+                ORDER BY monthK DESC
+            </if>
+            <if test="sortType == 5">
+                ORDER BY efficiency DESC
+            </if>
+            <if test="limit != null and limitSize != null">
+                LIMIT #{limit},#{limitSize}
+            </if>
+    </select>
+
+
+    <select id="getAuditProjectForWeb" resultMap="ProjectIncludeUserK">
+        SELECT
+
+        p.id,p.`status`,p.createUserId,p.projectName,p.projectNameShort,p.departmentId,p.projectGroupId,p.projectNumber,
+        u.`name` AS projectManager,
+        pt.projectTypeName AS projectTypeName,
+        pg.projectName AS  projectGroupName,
+        (SELECT `departmentName` FROM `department` WHERE  `id`=p.departmentId)
+        AS departmentName,
+        (SELECT `name` FROM `users` WHERE id=p.bTeacherId)  AS bTeacherName,
+        (SELECT `name` FROM `users` WHERE id=p.cTeacherId)  AS cTeacherName,
+        (SELECT IFNULL(SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600),0)  FROM work_diary_sub wds,work_diary wd
+        WHERE wds.workDiaryId=wd.id AND wd.`status`=4004 AND wds.jobTypeId = p.id AND wds.transactionSubId = 4)
+        AS useTime,
+--         IF(
+--         (SELECT COUNT(*) FROM project_acceptancerecord WHERE (`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2)) AND projectId=p.id > 0),
+--         (SELECT SUM(IFNULL(badSumK,0)) FROM project_acceptancerecord WHERE  projectId=p.id)
+--         ,
+--         (IFNULL((SELECT SUM(IF(pweek.isAdd = 0,-pweek.sumK,pweek.sumK)) FROM  project_week_acceptance pweek WHERE p.id=pweek.projectId),0))
+--         )
+        IFNULL(
+        sp_project_kw_of_projectId(p.id),0
+        )
+        AS totalK,
+
+        IF(
+        (SELECT COUNT(*) FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id > 0),
+        (SELECT score / 100 FROM project_acceptancerecord WHERE ((`type`=1 AND `status` IN (12,13)) OR (`type`=2 AND `status` IN (1,2))) AND projectId=p.id ORDER BY id DESC LIMIT 0,1)
+        ,
+        IFNULL((SELECT SUM(IF(pweek.isAdd = 0,-pweek.sumK,pweek.sumK)) FROM  project_week_acceptance pweek WHERE p.id=pweek.projectId),0)
+        / (p.initWorkload * (SELECT dayHour FROM allconfig) / (SELECT kHour FROM allconfig))
+        )
+        AS progress
+
+        FROM project p
+        LEFT JOIN project_acceptancerecord pa ON p.id = pa.projectId
+        LEFT JOIN project_group pg ON p.projectGroupId = pg.id
+        LEFT JOIN users u ON u.id = pg.projectManagerId
+        LEFT JOIN project_type pt ON p.projectTypeId = pt.id
+        WHERE 1=1 AND p.isValid = 1
+
+            AND CASE #{userId}
+              WHEN p.cTeacherId
+                THEN
+                  p.`status` = 5005
+                AND pa.`status` = 11
+                AND pa.score >= 70
+                AND p.cTeacherId = #{userId}
+              WHEN p.bTeacherId
+                THEN
+                p.`status` = 5005
+                AND pa.`status` = 10
+                AND p.bTeacherId = #{userId}
+            WHEN p.createUserId
+              THEN
+                p.`status` = 5007
+                AND p.createUserId = #{userId}
+            ELSE
+                p.`status` = 6000
+            END
+          <!--<if test="roleId == 7">-->
+                <!--&lt;!&ndash; 如果是C导师 &ndash;&gt;-->
+                <!--AND p.`status` = 5005-->
+                <!--AND pa.`status` = 11-->
+                <!--AND pa.score >= 70-->
+                <!--AND p.cTeacherId = #{userId}-->
+            <!--</if>-->
+            <!--<if test="roleId == 12">-->
+                <!--&lt;!&ndash; 如果是B导师 &ndash;&gt;-->
+                <!--AND p.`status` = 5005-->
+                <!--AND pa.`status` = 10-->
+                <!--AND p.bTeacherId = #{userId}-->
+            <!--</if>-->
+            <!--<if test="roleId == 13">-->
+                <!--&lt;!&ndash; 如果是绩效专员 &ndash;&gt;-->
+                <!--AND p.`status` = 5007-->
+                <!--AND p.createUserId = #{userId}-->
+            <!--</if>-->
+            <!--<if test="roleId != 7 and roleId != 12 and roleId != 13">-->
+                <!--AND  p.`status` = 6000-->
+            <!--</if>-->
+            GROUP BY p.id
+            <if test="limit != null and limitSize != null">
+                LIMIT #{limit},#{limitSize}
+            </if>
+    </select>
+
+    <select id="countAuditProject" resultType="java.lang.Integer">
+        SELECT
+            COUNT(
+                    (
+                    SELECT
+                    p.id
+                    FROM project p
+                    LEFT JOIN project_acceptancerecord pa ON p.id = pa.projectId
+                    LEFT JOIN project_group pg ON p.projectGroupId = pg.id
+                    LEFT JOIN users u ON u.id = pg.projectManagerId
+                    LEFT JOIN project_type pt ON p.projectTypeId = pt.id
+                    WHERE 1=1 AND p.isValid = 1
+                        <if test="roleId == 7">
+                            <!-- 如果是C导师 -->AND p.`status` = 5005
+                            AND pa.
+                            `status` = 11
+                            AND pa.score >= 70
+                            AND p.cTeacherId = #{userId}
+                        </if>
+                        <if test="roleId == 12">
+                            <!-- 如果是B导师 -->
+                            AND p.`status` = 5005
+                            AND pa.`status` = 10
+                            AND p.bTeacherId = #{userId}
+                        </if>
+                        <if test="roleId == 13">
+                            <!-- 如果是绩效专员 -->
+                            AND p.`status` = 5007
+                            AND p.createUserId = #{userId}
+                        </if>
+                        <if test="roleId != 7 and roleId != 12 and roleId != 13">AND p.`status` = 5007
+                            AND p
+                            .createUserId = #{userId} AND p.`status` = 6000
+                        </if>
+                    GROUP BY p.id
+                )
+         )
+    </select>
+
+    <!--获取两个时间段项目 全部、未破、半破、全破-->
+    <select id="getByTime" resultType="com.magic.ereal.business.entity.PoStatistics" >
+        SELECT COUNT(p.id) AS num,d.id AS departmentId ,d.departmentName FROM
+        department d LEFT JOIN project p ON p.departmentId = d.id AND p.isValid = 1
+        AND p.createTime BETWEEN #{startTime} AND #{endTime}
+        <if test="type == 1">
+            <!--未破-->
+            AND 5002 > p.status
+            AND (p.poAllTime IS NULL
+            OR p.poHalfTime IS NULL
+            OR (p.poAllTime > #{endTime} AND p.poHalfTime > #{endTime}))
+        </if>
+        <if test="type == 2">
+            <!--半破-->
+            AND 5004 > p.status
+            AND p.status > 5001
+            AND p.poHalfTime BETWEEN #{startTime} AND #{endTime}
+        </if>
+        <if test="type == 3">
+            <!--全破-->
+            AND p.status > 5003
+            AND p.poAllTime BETWEEN #{startTime} AND #{endTime}
+        </if>
+        <if test="roleId != 7">
+            WHERE d.companyId = (SELECT d1.companyId FROM department d1 WHERE d1.id = #{departmentId})
+        </if>
+        GROUP BY d.id
+    </select>
+
+    <!--传递卡 外部项目筛选-->
+    <select id="getWorkDiaryPro" resultMap="BaseProject" >
+        select * from project p ,project_group_user pg
+        WHERE p.status not in (5008) AND p.isValid = 1 AND
+        p.projectGroupId = pg.projectGroupId AND p.connectStatus = 3 AND p.isTerminate = 0 AND
+		(pg.userId = #{userId} OR p.cTeacherId=#{userId} OR p.bTeacherId=#{userId} OR p.createUserId = #{userId} OR p.aTeacher = #{userId}
+		<if test="roleId == 13">
+            OR p.departmentId IN (
+            SELECT
+              dd.id
+            FROM
+              department dd
+            WHERE
+              dd.companyId = (
+                SELECT
+                d.companyId
+                FROM
+                users u,
+                department d
+                WHERE
+                d.id = u.department_id
+                AND u.id = #{userId}
+                )
+            )
+        </if>
+		)
+		GROUP BY p.id
+    </select>
+</mapper>

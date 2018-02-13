@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IDepartmentAwardsMapper" >
+
+
+
+
+    <insert id="addDepartmentAwards">
+        INSERT INTO department_awards (departmentId,`type`,month,createTime,createUserId,ranking)
+        VALUES (#{departmentAwards.departmentId},#{departmentAwards.type},#{departmentAwards.month},
+        NOW(),#{departmentAwards.createUserId},#{departmentAwards.ranking})
+    </insert>
+
+
+    <select id="queryDepartmentAwards" resultType="com.magic.ereal.business.entity.DepartmentAwards">
+        SELECT da.* FROM department_awards da,department d
+        WHERE da.departmentId = d.id
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+        <if test="month != null">
+            AND DATE_FORMAT(da.`month`,'%Y-%m') = DATE_FORMAT(#{month},'%Y-%m')
+        </if>
+        <if test="type != null">
+            AND da.`type` = #{type}
+        </if>
+    </select>
+
+
+    <select id="queryDepartmentAwardsByItems" resultType="com.magic.ereal.business.entity.DepartmentAwards">
+        SELECT da.departmentId,da.createUserId,da.createTime,da.`month`
+        ,IF(da.type = 0 , '三维绩效奖', '结项奖') AS awardsName,d.departmentName,u.`name` AS createUserName
+        FROM department_awards da,department d,users u
+        WHERE da.departmentId = d.id AND u.department_id = d.id
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        <if test="month != null">
+            AND DATE_FORMAT(da.`month`,'%Y-%m') = DATE_FORMAT(#{month},'%Y-%m')
+        </if>
+        <if test="type != null">
+            AND da.`type` = #{type}
+        </if>
+        ORDER BY da.ranking ASC
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+    </select>
+
+
+    <select id="countDepartmentAwardsByItems" resultType="java.lang.Integer">
+        SELECT COUNT(0)
+        FROM department_awards da,department d,users u
+        WHERE da.departmentId = d.id AND u.department_id = d.id
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        <if test="month != null">
+            AND DATE_FORMAT(da.`month`,'%Y-%m') = DATE_FORMAT(#{month},'%Y-%m')
+        </if>
+        <if test="type != null">
+            AND da.`type` = #{type}
+        </if>
+    </select>
+
+    <select id="queryAwardsByUser" resultType="com.magic.ereal.business.entity.Awards">
+        SELECT
+            IF(da.type = 1, '三维绩效奖(团队)','结项奖(团队)') AS awardsName,
+            da.`month` AS time
+        FROM
+            department_awards da,
+            department d,
+            users u
+        WHERE
+        da.departmentId = d.id
+        AND u.department_id = d.id
+        AND u.id = #{userId}
+    </select>
+
+
+
+
+
+
+
+
+
+
+</mapper>

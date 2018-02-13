@@ -1,0 +1,1713 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IUsersStatisticsMapper">
+
+    <resultMap id="BaseResult" type="com.magic.ereal.business.entity.UsersStatistics">
+        <result column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="userId" property="userId" javaType="java.lang.Integer"/>
+        <result column="totalHour" property="totalHour" javaType="java.lang.Double"/>
+        <result column="kkb" property="kkb" javaType="java.lang.Double"/>
+        <result column="hsxs" property="hsxs" javaType="java.lang.Double"/>
+        <result column="kl" property="kl" javaType="java.lang.Double"/>
+        <result column="kc" property="kc" javaType="java.lang.Double"/>
+        <result column="kn" property="kn" javaType="java.lang.Double"/>
+        <result column="kProjectSchedule" property="kProjectSchedule" javaType="java.lang.Double"/>
+        <result column="kw" property="kw" javaType="java.lang.Double"/>
+        <result column="kmb" property="kmb" javaType="java.lang.Double"/>
+        <result column="kwcl" property="kwcl" javaType="java.lang.Double"/>
+        <result column="rwcl" property="rwcl" javaType="java.lang.Double"/>
+        <result column="wwcl" property="wwcl" javaType="java.lang.Double"/>
+        <result column="personKCulture" property="personKCulture" javaType="java.lang.Double"/>
+        <result column="teamKCulture" property="teamKCulture" javaType="java.lang.Double"/>
+        <result column="teamKCultureFinishRate" property="teamKCultureFinishRate" javaType="java.lang.Double"/>
+        <result column="jxTotalNum" property="jxTotalNum" javaType="java.lang.Double"/>
+        <result column="startTime" property="startTime" javaType="java.util.Date"/>
+        <result column="endTime" property="endTime" javaType="java.util.Date"/>
+        <result column="departmentId" property="departmentId" javaType="java.lang.Integer"/>
+        <result column="userName" property="userName" javaType="java.lang.String"/>
+        <result column="avatar" property="avatar" javaType="java.lang.String"/>
+        <result column="departmentName" property="departmentName" javaType="java.lang.String"/>
+        <result column="companyName" property="companyName" javaType="java.lang.String"/>
+        <result column="type" property="type" javaType="java.lang.Integer"/>
+        <result column="oneBannerId" property="oneBannerId" javaType="java.lang.Integer"/>
+        <result column="twoBannerId" property="twoBannerId" javaType="java.lang.Integer"/>
+        <result column="threeBannerId" property="threeBannerId" javaType="java.lang.Integer"/>
+        <result column="actualNum" property="actualNum" javaType="java.lang.Double"/>
+        <result column="targetNum" property="targetNum" javaType="java.lang.Double"/>
+        <!-- 一对多关联查询 -->
+        <collection property="list" column="id" ofType="com.magic.ereal.business.entity.UsersStatisticsThree">
+            <result column="id" property="id" javaType="java.lang.Integer"/>
+            <result column="userId" property="userId" javaType="java.lang.Integer"/>
+            <result column="userStatisticsId" property="userStatisticsId" javaType="java.lang.Integer"/>
+            <result column="threeVeidooId" property="threeVeidooId" javaType="java.lang.Integer"/>
+            <result column="threeVeidooScore" property="threeVeidooScore" javaType="java.lang.Double"/>
+            <result column="threeVeidooName" property="threeVeidooName" javaType="java.lang.String"/>
+            <result column="msg" property="msg" javaType="java.lang.String"/>
+        </collection>
+
+    </resultMap>
+
+
+    <select id="statisticsVeidooKKBRanking" resultType="com.magic.ereal.business.entity.User">
+        SELECT
+        u.`id` AS id,
+        us.kkb AS kkb
+        FROM
+        users_statistics us,
+        users u,
+        department d,
+        banner b
+        WHERE
+        us.userId = u.id
+        AND b.id = us.oneBannerId
+        AND b.`status` = 1
+        AND u.department_id = d.id
+        AND d.companyId = #{companyId}
+        AND us.startTime = #{startTime}
+        AND us.endTime  = #{endTime}
+        ORDER BY
+        kkb DESC
+    </select>
+
+
+    <select id="statisticsVeidooForAPI" resultType="com.magic.ereal.business.entity.VeidooStatistics">
+        SELECT
+        SUM(IFNULL(us.kl,0)) AS kl,
+        SUM(IFNULL(us.kc,0)) AS kc,
+        SUM(IFNULL(us.kn,0)) AS kn,
+        SUM(IFNULL(us.kw,0)) AS kw,
+        SUM(IFNULL(us.kwcl,0)) AS kwcl,
+        SUM(IFNULL(us.kProjectSchedule,0)) AS kProjectSchedule,
+        SUM(IFNULL(us.kmb,0)) AS kmb,
+        SUM(IFNULL(us.wwcl,0)) AS wwcl
+        FROM
+        users_statistics us,
+        users u,
+        department d,
+        banner b
+        WHERE us.userId = u.id
+        AND u.department_id = d.id
+        AND b.id = us.oneBannerId
+        AND b.`status` = 1
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        AND us.startTime = #{startTime}
+        AND us.endTime  = #{endTime}
+    </select>
+
+
+    <select id="statisticsVeidooByDepartmentForAPI" resultType="com.magic.ereal.business.entity.VeidooStatistics">
+        SELECT
+        SUM(IFNULL(one.kl,0)) AS kl,
+        SUM(IFNULL(one.kc,0)) AS kc,
+        SUM(IFNULL(one.kn,0)) AS kn,
+        SUM(IFNULL(one.kw,0)) AS kw,
+        SUM(IFNULL(one.kwcl,0)) AS kwcl,
+        SUM(IFNULL(one.kProjectSchedule,0)) AS kProjectSchedule,
+        SUM(IFNULL(one.kmb,0)) AS kmb,
+        SUM(IFNULL(two.rwcl,0)) AS rwcl,
+        SUM(IFNULL(two.wwcl,0)) AS wwcl,
+        one.departmentId AS departmentId
+        FROM
+        (
+        SELECT
+        SUM(IFNULL(us1.kl,0)) AS kl,
+        SUM(IFNULL(us1.kc,0)) AS kc,
+        SUM(IFNULL(us1.kn,0)) AS kn,
+        SUM(IFNULL(us1.kw,0)) AS kw,
+        SUM(IFNULL(us1.kwcl,0)) AS kwcl,
+        SUM(IFNULL(us1.kProjectSchedule,0)) AS kProjectSchedule,
+        SUM(IFNULL(us1.kmb,0)) AS kmb,
+        d.id AS departmentId
+        FROM
+        users_statistics us1,
+        banner b1,
+        users u,
+        department d
+        WHERE
+        us1.userId = u.id
+        AND u.department_id = d.id
+        AND us1.oneBannerId = b1.id
+        AND b1.`status` = 1
+        AND d.id = #{departmentId}
+        AND us1.startTime = #{startTime}
+        AND us1.endTime  = #{endTime}
+        ) AS one LEFT JOIN
+        (
+        SELECT
+        SUM(IFNULL(us1.rwcl,0))  / COUNT(0) AS rwcl,
+        SUM(IFNULL(us1.wwcl,0)) AS wwcl,
+        d.id AS departmentId
+        FROM
+        users_statistics us1,
+        banner b1,
+        users u,
+        department d
+        WHERE
+        us1.userId = u.id
+        AND u.department_id = d.id
+        AND us1.twoBannerId = b1.id
+        AND b1.`status` = 1
+        AND d.id = #{departmentId}
+        AND us1.startTime = #{startTime}
+        AND us1.endTime  = #{endTime}
+        ) AS two
+        ON one.departmentId = two.departmentId
+
+
+    </select>
+
+
+    <select id="statisticsVeidooForAPIRankingForAPI" resultType="com.magic.ereal.business.entity.VeidooDepartment">
+        SELECT
+        (one.kwcl * 0.5 + two.rwcl * 0.3) AS totalScore,
+        one.departmentId,
+        one.departmentName
+        FROM
+
+        (
+        SELECT
+        SUM(IFNULL(us.kwcl,0)) AS kwcl,
+        d.id AS departmentId ,
+        d.departmentName AS departmentName
+        FROM
+        department d
+        LEFT JOIN users_statistics us ON d.id = us.departmentId
+        AND us.startTime = #{startTime}
+        AND us.endTime = #{endTime}
+        AND us.oneBannerId IN (SELECT id FROM banner  WHERE `status` = 1)
+
+        WHERE
+        1 = 1
+        AND d.companyId = #{companyId}
+        GROUP BY d.id
+
+        ) AS one LEFT JOIN
+        (
+
+        SELECT
+        IFNULL(us.rwcl,0) AS rwcl,
+        d.id AS departmentId ,
+        d.departmentName AS departmentName
+        FROM
+        department d
+        LEFT JOIN users_statistics us ON d.id = us.departmentId
+        AND us.startTime = #{startTime}
+        AND us.endTime = #{endTime}
+        AND us.twoBannerId IN (SELECT id FROM banner  WHERE `status` = 1)
+        WHERE  1=1
+        AND d.companyId = #{companyId}
+        GROUP BY d.id
+        ) AS two ON one.departmentId = two.departmentId
+        ORDER BY totalScore DESC
+    </select>
+
+
+    <select id="statisticsVeidooRankingForAPIByCompanyId" resultType="com.magic.ereal.business.entity.VeidooStatistics">
+        SELECT
+        d.id AS departmentId,
+        d.departmentName AS departmentName,
+        (SUM(
+        (IFNULL(IF(
+        u.role_id = 12,
+        (SELECT
+        SUM(
+        IF((SELECT COUNT(*) FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) AND projectId = p.id)
+        > 0,
+        (SELECT score FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) ORDER BY createTime DESC LIMIT 0,1)
+        ,
+        (SELECT score FROM project_acceptancerecord WHERE type=1 AND `status`=12 AND projectId=p.id
+        ORDER BY createTime DESC LIMIT 0,1)
+        )
+        ) / COUNT(*)
+        * 30 / 70
+        FROM project p
+        WHERE
+        p.departmentId=u.department_id
+        AND
+        (p.`status`=5008 OR p.`status`=5007 OR p.`status`=5006)
+        AND p.overTime BETWEEN  #{startTime} AND #{endTime}
+        ),
+        IF(
+        (SELECT sp_isProjectDepartment(u.id,#{startTime}))=1,
+        (SELECT
+
+        IF((SELECT COUNT(*) FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) AND projectId = p.id)
+        > 0,
+        (SELECT score FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) ORDER BY createTime DESC LIMIT 0,1)
+        ,
+        (SELECT score FROM project_acceptancerecord WHERE type=1 AND `status`=12 AND projectId=p.id
+        ORDER BY createTime DESC LIMIT 0,1)
+        )
+        / COUNT(*) * 30 / 70
+        FROM project p,project_group_user pgu
+        WHERE
+        p.projectGroupId=pgu.projectGroupId
+        AND pgu.userId=u.id
+        AND
+        (p.`status`=5008 OR p.`status`=5007 OR p.`status`=5006)
+        AND p.overTime BETWEEN  #{startTime} AND #{endTime}
+        )
+        ,
+        (SELECT
+        SUM(IFNULL(kg.score,0))
+        FROM three_veidoo_kg kg
+        WHERE
+        kg.userId=u.id
+        AND kg.startTime = #{startTime} AND kg.endTime = #{endTime}
+        )
+        )
+        ),0) +
+
+        IFNULL(
+        IF(
+        IFNULL(((sp_duty_ok(#{startTime},u.id) - sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id))
+        / (sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH) ,u.id)* 0.01)
+        ),0) >
+        ((IFNULL(sp_duty_ok(#{startTime},u.id),0) - (SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+        WHERE uu.department_id = dd.id AND dd.companyId = #{companyId} AND uu.Incumbency = 2))
+        /
+        ((SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+        WHERE uu.department_id = dd.id AND dd.companyId = #{companyId} AND uu.Incumbency = 2) * 0.01))
+        ,
+        IF((IFNULL(((sp_duty_ok(#{startTime},u.id) - sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id))
+        / (sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id) * 0.01)
+        ),0)) > 0 ,
+        IFNULL(((sp_duty_ok(#{startTime},u.id) - sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id))
+        / (sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id) * 0.01)
+        ),0),0 )
+        ,
+        IF(((IFNULL(sp_duty_ok(#{startTime},u.id),0) - (SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+        WHERE uu.department_id = dd.id AND dd.companyId = #{companyId} AND uu.Incumbency = 2))
+        /
+        ((SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+        WHERE uu.department_id = dd.id AND dd.companyId = #{companyId} AND uu.Incumbency = 2) * 0.01)) > 0,
+        ((IFNULL(sp_duty_ok(#{startTime},u.id),0) - (SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+        WHERE uu.department_id = dd.id AND dd.companyId = #{companyId} AND uu.Incumbency = 2))
+        /
+        ((SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+        WHERE uu.department_id = dd.id AND dd.companyId = #{companyId} AND uu.Incumbency = 2) * 0.01)),0)
+        ),0)
+        +
+        (
+        (SELECT
+        IFNULL(
+        IF ((SUM(UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) >= 8, 4,
+        (4 - (SUM(UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) / 2) ),0 )
+        FROM
+        work_diary wd,
+        work_diary_sub wds,
+        job_type jt,
+        transactionsub sb
+        WHERE
+        wd.id = wds.workDiaryId
+        AND wds.jobTypeId = jt.id
+        AND jt.transactionSubId = sb.id
+        AND sb.transactionTypeId = 3
+        AND wd.userId = u.id
+        AND wd.workTime BETWEEN #{startTime} AND #{endTime})
+        +
+
+        IF(
+        (SELECT
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=6 AND userId=u.id
+        AND  startTime = #{startTime} AND endTime = #{endTime} ),0)) * 0.6 = 0, 6,
+        (SELECT
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=6 AND userId=u.id
+        AND  startTime = #{startTime} AND endTime = #{endTime} ),0)) * 0.6
+
+        )
+
+        ) +
+
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=3 AND userId=u.id
+        AND startTime = #{startTime} AND endTime = #{endTime}),(SELECT weight FROM three_veidoo WHERE id = 3)) +
+
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=4 AND userId=u.id
+        AND startTime = #{startTime} AND endTime = #{endTime}),0) +
+
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=5 AND userId=u.id
+        AND startTime = #{startTime} AND endTime = #{endTime}),(SELECT weight FROM three_veidoo WHERE id = 5)) ) * 0.6 +
+        IFNULL((
+        SELECT SUM(IFNULL(score,0)) FROM  three_veidoo_kg WHERE type=1 AND userId=u.id AND startTime = #{startTime} AND endTime = #{endTime}
+        ),0) * 0.4) / ( SELECT COUNT(0) FROM users  WHERE department_id = d.id)) AS wwcl,
+        ( SELECT COUNT(*) FROM users WHERE department_id  = d.id ) AS persons
+        FROM
+        users u,department d,company c
+        WHERE u.department_id = d.id
+        AND u.role_id NOT IN (1)
+        AND c.id = d.companyId
+        AND c.id = #{companyId}
+        GROUP BY d.id
+        ORDER BY wwcl DESC
+
+    </select>
+
+
+    <select id="statisticsVeidooRankingForAPI" resultType="com.magic.ereal.business.entity.VeidooStatistics">
+
+        SELECT
+        one.kwcl,two.rwcl,one.departmentId,one.wwcl
+        FROM
+        (
+        SELECT
+        SUM(IFNULL(us.kwcl,0)) AS kwcl,
+        SUM(IFNULL(us.wwcl,0)) AS wwcl,
+        d.id AS departmentId
+        FROM
+        department d
+        LEFT JOIN users_statistics us ON d.id = us.departmentId
+        AND us.startTime = #{startTime}
+        AND us.endTime = #{endTime}
+        AND us.oneBannerId IN (SELECT id FROM banner  WHERE `status` = 1)
+
+        WHERE
+        1 = 1
+        AND d.companyId = (
+        SELECT
+        companyId
+        FROM
+        department
+        WHERE
+        id = #{departmentId}
+        )
+        GROUP BY d.id
+
+        ) AS one LEFT JOIN
+
+        (
+
+        SELECT
+        IFNULL(us.rwcl,0) AS rwcl,
+        d.id AS departmentId
+        FROM
+        department d
+        LEFT JOIN users_statistics us ON d.id = us.departmentId
+        AND us.startTime = #{startTime} AND us.endTime = #{endTime}
+        AND us.twoBannerId IN (SELECT id FROM banner  WHERE `status` = 1)
+        WHERE  1=1
+        AND d.companyId = (
+        SELECT
+        companyId
+        FROM
+        department
+        WHERE
+        id = #{departmentId}
+        )
+        GROUP BY d.id
+        ) AS two ON one.departmentId = two.departmentId
+
+
+    </select>
+
+    <resultMap id="IncludeThreeVeidoo" type="com.magic.ereal.business.entity.VeidooStatistics">
+        <association property="threeList" column="{userId=userId,startTime=startTime,endTime=endTime}" select="com.magic.ereal.business.mapper.IUsersStatisticsThreeMapper.listForAPI"/>
+        <association property="lastThreeList" column="{userId=userId,startTime=lastStartTime,endTime=lastEndTime}" select="com.magic.ereal.business.mapper.IUsersStatisticsThreeMapper.listForAPI"/>
+    </resultMap>
+
+    <select id="statisticsVeidooByUserForAPI" resultMap="IncludeThreeVeidoo">
+        SELECT
+        #{lastStartTime} AS lastStartTime,
+        #{lastEndTime} AS lastEndTime,
+        #{startTime} AS startTime,
+        #{endTime} AS endTime,
+        IFNULL(us1.kmb, 0) AS kmb,
+        IFNULL(us1.kkb, 0) AS kkb,
+        IFNULL(us1.kwcl, 0) AS kwcl,
+        IFNULL(us1.kl, 0) AS kl,
+        IFNULL(us1.kc, 0) AS kc,
+        us1.id AS id,
+        IFNULL(us1.kn, 0) AS kn,
+        us1.userId AS userId,
+        IFNULL(us1.kw, 0) AS kw,
+        IFNULL(us1.rwcl, 0) AS rwcl,
+        IFNULL(us1.wwcl, 0) AS wwcl,
+        IFNULL(us1.kg, 0) AS kg,
+        IFNULL(us1.yd, 0) AS yd,
+        IFNULL(us1.hy, 0) AS hy,
+        IFNULL(us1.tz, 0) AS tz,
+        IFNULL(us1.wx, 0) AS wx,
+        IFNULL(us1.zb, 0) AS zb
+        FROM
+        users_statistics us1,
+        banner b1
+        WHERE
+        us1.oneBannerId = b1.id
+        AND b1.`status` = 1
+        AND us1.userId = #{userId}
+        AND us1.startTime = #{startTime}
+        AND us1.endTime  = #{endTime}
+        UNION
+        SELECT
+        #{lastStartTime} AS lastStartTime,
+        #{lastEndTime} AS lastEndTime,
+        #{startTime} AS startTime,
+        #{endTime} AS endTime,
+        IFNULL(us2.kmb, 0) AS kmb,
+        IFNULL(us2.kkb, 0) AS kkb,
+        IFNULL(us2.kwcl, 0) AS kwcl,
+        IFNULL(us2.kl, 0) AS kl,
+        IFNULL(us2.kc, 0) AS kc,
+        us2.id AS id,
+        IFNULL(us2.kn, 0) AS kn,
+        us2.userId AS userId,
+        IFNULL(us2.kw, 0) AS kw,
+        IFNULL(us2.rwcl, 0) AS rwcl,
+        IFNULL(us2.wwcl, 0) AS wwcl,
+        IFNULL(us2.kg, 0) AS kg,
+        IFNULL(us2.yd, 0) AS yd,
+        IFNULL(us2.hy, 0) AS hy,
+        IFNULL(us2.tz, 0) AS tz,
+        IFNULL(us2.wx, 0) AS wx,
+        IFNULL(us2.zb, 0) AS zb
+        FROM
+        users_statistics us2,
+        banner b2
+        WHERE
+        us2.twoBannerId = b2.id
+        AND b2.`status` = 1
+        AND us2.userId = #{userId}
+        AND us2.startTime = #{startTime}
+        AND us2.endTime = #{endTime}
+
+
+    </select>
+
+    <select id="getCompanyStaOfUser" resultType="com.magic.ereal.business.entity.UsersStatistics">
+        SELECT
+            IFNULL(us1.kwcl, 0) AS kwcl,
+            us1.userId AS userId,
+            IFNULL(us1.rwcl, 0) AS rwcl
+        FROM
+            users_statistics us1,
+            banner b1,
+            users u,
+            department d
+        WHERE
+            us1.oneBannerId = b1.id
+        AND b1.`status` = 1
+        AND us1.userId = u.id
+        AND u.department_id = d.id
+        AND d.companyId = #{companyId}
+        AND us1.startTime = #{startTime}
+        AND us1.endTime = #{endTime}
+        GROUP BY
+            us1.userId
+        UNION
+            SELECT
+                IFNULL(us2.kwcl, 0) AS kwcl,
+                us2.userId AS userId,
+                IFNULL(us2.rwcl, 0) AS rwcl
+            FROM
+                users_statistics us2,
+                banner b2,
+                users u2,
+                department d2
+            WHERE
+                us2.twoBannerId = b2.id
+            AND b2.`status` = 1
+            AND us2.userId = u2.id
+            AND u2.department_id = d2.id
+            AND d2.companyId = #{companyId}
+            AND us2.startTime = #{startTime}
+            AND us2.endTime = #{endTime}
+            GROUP BY
+                us2.userId
+    </select>
+
+
+    <delete id="delUsersStatistics">
+        UPDATE `users_statistics`
+        <if test="oneBannerId != null">
+            SET  kwcl = NULL
+        </if>
+        <if test="twoBannerId != null">
+            SET  rwcl = NULL
+        </if>
+        WHERE
+        <if test="oneBannerId != null">
+            oneBannerId=#{oneBannerId}
+        </if>
+        <if test="twoBannerId != null">
+            twoBannerId=#{twoBannerId}
+        </if>
+    </delete>
+
+    <select id="queryPendingData" resultType="com.magic.ereal.business.entity.UsersStatistics">
+        SELECT
+        us.*,u.name AS  userName,d.departmentName AS departmentName,c.companyName AS companyName
+        FROM
+        users_statistics us
+        LEFT JOIN users u ON us.userId = u.id
+        AND us.userId IS NOT NULL
+        LEFT JOIN department d ON d.id = u.department_id
+        LEFT JOIN company c ON c.id = d.companyId
+        LEFT JOIN banner b ON
+        <if test="veidooType == 1">
+            b.id = us.oneBannerId
+        </if>
+        <if test="veidooType == 2">
+            b.id = us.twoBannerId
+        </if>
+        <if test="veidooType == 3">
+            b.id = us.threeBannerId
+        </if>
+        AND b.type = 2
+        AND b.`status` IN (0, 2)
+        WHERE
+        1 = 1
+        AND u.Incumbency NOT IN (3)
+        <if test="veidooType == 1">
+            AND (us.oneStatus  = 1)
+        </if>
+        <if test="veidooType == 2">
+            AND (us.twoStatus  = 1)
+        </if>
+        <if test="veidooType == 3">
+            AND (us.threeBannerId IS NULL OR b.`status` IN (0,2))
+            AND us.wwcl IS NOT NULL
+        </if>
+        AND us.startTime = #{startTime}
+        AND us.endTime = #{endTime}
+        <if test="companyId != null">
+            AND c.id = #{companyId}
+        </if>
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+    </select>
+
+
+
+    <select id="countPendingData" resultType="java.lang.Integer">
+        SELECT
+        COUNT(*)
+        FROM
+        users_statistics us
+        LEFT JOIN users u ON us.userId = u.id
+        AND us.userId IS NOT NULL
+        LEFT JOIN department d ON d.id = u.department_id
+        LEFT JOIN company c ON c.id = d.companyId
+        LEFT JOIN banner b ON
+        <if test="veidooType == 1">
+            b.id = us.oneBannerId
+        </if>
+        <if test="veidooType == 2">
+            b.id = us.twoBannerId
+        </if>
+        <if test="veidooType == 3">
+            b.id = us.threeBannerId
+        </if>
+        AND b.type = 2
+        AND b.`status` IN (0, 2)
+        WHERE
+        1 = 1
+        <if test="veidooType == 1">
+            AND (us.oneStatus  = 1)
+        </if>
+        <if test="veidooType == 2">
+            AND (us.twoStatus  = 1)
+        </if>
+        <if test="veidooType == 3">
+            AND (us.threeBannerId IS NULL OR b.`status` IN (0,2))
+        </if>
+        AND us.startTime = #{startTime}
+        AND us.endTime = #{endTime}
+        <if test="companyId != null">
+            AND c.id = #{companyId}
+        </if>
+    </select>
+
+
+    <select id="list" resultMap="BaseResult" parameterType="map">
+        select * from department d ,users_statistics us LEFT JOIN users_statistics_three ust ON us.id = ust.userStatisticsId
+        WHERE us.startTime = '' AND us.endTime = ''
+
+        <if test="type == 1">
+            AND us.userId = ''
+            AND us.type = ''
+        </if>
+        <if test="type == 2">
+            AND us.departmentId = ''
+            AND us.type = ''
+        </if>
+        <if test="type == 3">
+            AND us.d
+        </if>
+    </select>
+
+
+    <insert id="save" parameterType="com.magic.ereal.business.entity.UsersStatistics" keyProperty="id" useGeneratedKeys="true" >
+        insert into users_statistics (userId, totalHour, kkb, hsxs, kl, kc, kmb, kwcl, rwcl,
+        wwcl, jxTotalNum, startTime, endTime, departmentId, `type`,`kProjectSchedule`,`kn`,`kw`,personKCulture,teamKCulture,teamKCultureFinishRate
+        ,kg,tz,yd,hy,wx,zb,actualNum,targetNum)
+        values (#{userId},#{totalHour},#{kkb},#{hsxs},#{kl},#{kc},#{kmb},#{kwcl},#{rwcl},
+        #{wwcl},#{jxTotalNum},#{startTime},#{endTime},#{departmentId},#{type},#{kProjectSchedule},#{kn},#{kw},#{personKCulture},#{teamKCulture},#{teamKCultureFinishRate},
+        #{u.kg},#{u.tz},#{u.yd},#{u.hy},#{u.wx},#{u.zb},#{u.actualNum},#{u.targetNum})
+    </insert>
+
+    <insert id="saveList" parameterType="list" keyProperty="id" useGeneratedKeys="true" >
+        insert into users_statistics (userId, totalHour, kkb, hsxs, kl, kc, kmb, kwcl, rwcl,
+        wwcl, jxTotalNum, startTime, endTime, departmentId, `type`,`kProjectSchedule`,`kn`,`kw`,personKCulture,teamKCulture,teamKCultureFinishRate
+        ,kg,tz,yd,hy,wx,zb,oneStatus,twoStatus,actualNum,targetNum)
+        values
+        <foreach collection="list" item="u" separator="," >
+            (#{u.userId},#{u.totalHour},#{u.kkb},#{u.hsxs},#{u.kl},#{u.kc},#{u.kmb},#{u.kwcl},#{u.rwcl},#{u.wwcl},
+            #{u.jxTotalNum},#{u.startTime},#{u.endTime},#{u.departmentId},#{u.type},#{u.kProjectSchedule},#{u.kn},#{u.kw},
+            #{u.personKCulture},#{u.teamKCulture},#{u.teamKCultureFinishRate},
+            #{u.kg},#{u.tz},#{u.yd},#{u.hy},#{u.wx},#{u.zb},#{u.oneStatus},#{u.twoStatus},#{u.actualNum},#{u.targetNum})
+        </foreach>
+    </insert>
+
+    <update id="update" parameterType="com.magic.ereal.business.entity.UsersStatistics">
+        update users_statistics
+        <set>
+            <if test="u.targetNum != null">
+                targetNum = #{u.targetNum},
+            </if>
+            <if test="u.actualNum != null">
+                actualNum = #{u.actualNum},
+            </if>
+            <if test="u.twoStatus != null">
+                twoStatus = #{u.twoStatus},
+            </if>
+            <if test="u.oneStatus != null">
+                oneStatus = #{u.oneStatus},
+            </if>
+            <if test="u.zb != null">
+                zb = #{u.zb},
+            </if>
+            <if test="u.wx != null">
+                wx = #{u.wx},
+            </if>
+            <if test="u.hy != null">
+                hy = #{u.hy},
+            </if>
+            <if test="u.yd != null">
+                yd = #{u.yd},
+            </if>
+            <if test="u.tz != null">
+                tz = #{u.tz},
+            </if>
+            <if test="u.kg != null">
+                kg = #{u.kg},
+            </if>
+            <if test="u.threeBannerId != null">
+                threeBannerId = #{u.threeBannerId},
+            </if>
+            <if test="u.twoBannerId != null">
+                twoBannerId = #{u.twoBannerId},
+            </if>
+            <if test="u.oneBannerId != null">
+                oneBannerId = #{u.oneBannerId},
+            </if>
+            <if test="u.totalHour != null">
+                totalHour = #{u.totalHour} ,
+            </if>
+            <if test="u.kkb != null">
+                kkb = #{u.kkb} ,
+            </if>
+            <if test="u.hsxs != null">
+                hsxs = #{u.hsxs} ,
+            </if>
+            <if test="u.kl != null">
+                kl = #{u.kl} ,
+            </if>
+            <if test="u.kc != null">
+                kc = #{u.kc} ,
+            </if>
+            <if test="u.kn != null">
+                kn = #{u.kn} ,
+            </if>
+            <if test="u.kw != null">
+                kw = #{u.kw} ,
+            </if>
+            <if test="u.kProjectSchedule != null">
+                kProjectSchedule = #{u.kProjectSchedule} ,
+            </if>
+            <if test="u.kmb != null">
+                kmb = #{u.kmb} ,
+            </if>
+            <if test="u.kwcl != null">
+                kwcl = #{u.kwcl} ,
+            </if>
+            <if test="u.rwcl != null">
+                rwcl = #{u.rwcl} ,
+            </if>
+            <if test="u.wwcl != null">
+                wwcl = #{u.wwcl} ,
+            </if>
+            <if test="u.personKCulture != null">
+                personKCulture = #{u.personKCulture} ,
+            </if>
+            <if test="u.teamKCulture != null">
+                teamKCulture = #{u.teamKCulture} ,
+            </if>
+            <if test="u.teamKCultureFinishRate != null">
+                teamKCultureFinishRate = #{u.teamKCultureFinishRate} ,
+            </if>
+            <if test="u.jxTotalNum != null">
+                jxTotalNum = #{u.jxTotalNum}
+            </if>
+        </set>
+        where startTime = #{startTime}
+        and endTime = #{endTime}
+        and `type` = #{type}
+        <if test="type == 1">
+            and userId = #{userId}
+        </if>
+        <if test="type == 2">
+            and departmentId = #{departmentId}
+        </if>
+    </update>
+
+
+
+    <update id="updateById" parameterType="com.magic.ereal.business.entity.UsersStatistics">
+        update users_statistics
+        <set>
+            <if test="u.targetNum != null">
+                targetNum = #{u.targetNum},
+            </if>
+            <if test="u.actualNum != null">
+                actualNum = #{u.actualNum},
+            </if>
+            <if test="u.twoStatus != null">
+                twoStatus = #{u.twoStatus},
+            </if>
+            <if test="u.oneStatus != null">
+                oneStatus = #{u.oneStatus},
+            </if>
+            <if test="u.zb != null">
+                zb = #{u.zb},
+            </if>
+            <if test="u.wx != null">
+                wx = #{u.wx},
+            </if>
+            <if test="u.hy != null">
+                hy = #{u.hy},
+            </if>
+            <if test="u.yd != null">
+                yd = #{u.yd},
+            </if>
+            <if test="u.tz != null">
+                tz = #{u.tz},
+            </if>
+            <if test="u.kg != null">
+                kg = #{u.kg},
+            </if>
+            <if test="u.threeBannerId != null">
+                threeBannerId = #{u.threeBannerId},
+            </if>
+            <if test="u.twoBannerId != null">
+                twoBannerId = #{u.twoBannerId},
+            </if>
+            <if test="u.oneBannerId != null">
+                oneBannerId = #{u.oneBannerId},
+            </if>
+            <if test="u.totalHour != null">
+                totalHour = #{u.totalHour} ,
+            </if>
+            <if test="u.kkb != null">
+                kkb = #{u.kkb} ,
+            </if>
+            <if test="u.hsxs != null">
+                hsxs = #{u.hsxs} ,
+            </if>
+            <if test="u.kl != null">
+                kl = #{u.kl} ,
+            </if>
+            <if test="u.kc != null">
+                kc = #{u.kc} ,
+            </if>
+            <if test="u.kn != null">
+                kn = #{u.kn} ,
+            </if>
+            <if test="u.kw != null">
+                kw = #{u.kw} ,
+            </if>
+            <if test="u.kProjectSchedule != null">
+                kProjectSchedule = #{u.kProjectSchedule} ,
+            </if>
+            <if test="u.kmb != null">
+                kmb = #{u.kmb} ,
+            </if>
+            <if test="u.kwcl != null">
+                kwcl = #{u.kwcl} ,
+            </if>
+            <if test="u.rwcl != null">
+                rwcl = #{u.rwcl} ,
+            </if>
+            <if test="u.wwcl != null">
+                wwcl = #{u.wwcl} ,
+            </if>
+            <if test="u.personKCulture != null">
+                personKCulture = #{u.personKCulture} ,
+            </if>
+            <if test="u.teamKCulture != null">
+                teamKCulture = #{u.teamKCulture} ,
+            </if>
+            <if test="u.teamKCultureFinishRate != null">
+                teamKCultureFinishRate = #{u.teamKCultureFinishRate} ,
+            </if>
+            <if test="u.jxTotalNum != null">
+                jxTotalNum = #{u.jxTotalNum}
+            </if>
+        </set>
+        where id  = #{u.id}
+    </update>
+
+
+    <update id="updateList" parameterType="list">
+        <foreach collection="list" separator=";" item="u" index="index">
+            update users_statistics
+            <set>
+                <if test="u.targetNum != null">
+                    targetNum = #{u.targetNum},
+                </if>
+                <if test="u.actualNum != null">
+                    actualNum = #{u.actualNum},
+                </if>
+                <if test="u.twoStatus != null">
+                    twoStatus = #{u.twoStatus},
+                </if>
+                <if test="u.oneStatus != null">
+                    oneStatus = #{u.oneStatus},
+                </if>
+                <if test="u.zb != null">
+                    zb = #{u.zb},
+                </if>
+                <if test="u.wx != null">
+                    wx = #{u.wx},
+                </if>
+                <if test="u.hy != null">
+                    hy = #{u.hy},
+                </if>
+                <if test="u.yd != null">
+                    yd = #{u.yd},
+                </if>
+                <if test="u.tz != null">
+                    tz = #{u.tz},
+                </if>
+                <if test="u.kg != null">
+                    kg = #{u.kg},
+                </if>
+                <if test="u.threeBannerId != null">
+                    threeBannerId = #{u.threeBannerId},
+                </if>
+                <if test="u.twoBannerId != null">
+                    twoBannerId = #{u.twoBannerId},
+                </if>
+                <if test="u.oneBannerId != null">
+                    oneBannerId = #{u.oneBannerId},
+                </if>
+                <if test="u.totalHour != null">
+                    totalHour = #{u.totalHour},
+                </if>
+                <if test="u.kkb != null">
+                    kkb = #{u.kkb},
+                </if>
+                <if test="u.hsxs != null">
+                    hsxs = #{u.hsxs} ,
+                </if>
+                <if test="u.kl != null">
+                    kl = #{u.kl} ,
+                </if>
+                <if test="u.kc != null">
+                    kc = #{u.kc} ,
+                </if>
+                <if test="u.kn != null">
+                    kn = #{u.kn} ,
+                </if>
+                <if test="u.kw != null">
+                    kw = #{u.kw} ,
+                </if>
+                <if test="u.kProjectSchedule != null">
+                    kProjectSchedule = #{u.kProjectSchedule} ,
+                </if>
+                <if test="u.kmb != null">
+                    kmb = #{u.kmb} ,
+                </if>
+                <if test="u.kwcl != null">
+                    kwcl = #{u.kwcl} ,
+                </if>
+                <if test="u.rwcl != null">
+                    rwcl = #{u.rwcl} ,
+                </if>
+                <if test="u.wwcl != null">
+                    wwcl = #{u.wwcl} ,
+                </if>
+                <if test="u.personKCulture != null">
+                    personKCulture = #{u.personKCulture} ,
+                </if>
+                <if test="u.teamKCulture != null">
+                    teamKCulture = #{u.teamKCulture} ,
+                </if>
+                <if test="u.teamKCultureFinishRate != null">
+                    teamKCultureFinishRate = #{u.teamKCultureFinishRate} ,
+                </if>
+                <if test="u.jxTotalNum != null">
+                    jxTotalNum = #{u.jxTotalNum}
+                </if>
+            </set>
+            where startTime = #{u.startTime}
+            and endTime = #{u.endTime}
+            and `type` = #{u.type}
+            <if test="u.type == 1">
+                and userId = #{u.userId}
+            </if>
+            <if test="u.type == 2">
+                and departmentId = #{u.departmentId}
+            </if>
+        </foreach>
+
+    </update>
+
+
+    <update id="updateListById" parameterType="list">
+        <foreach collection="list" separator=";" item="u" index="index">
+            update users_statistics
+            <set>
+                <if test="u.twoStatus != null">
+                    twoStatus = #{u.twoStatus},
+                </if>
+                <if test="u.oneStatus != null">
+                    oneStatus = #{u.oneStatus},
+                </if>
+                <if test="u.threeBannerId != null">
+                    threeBannerId = #{u.threeBannerId},
+                </if>
+                <if test="u.twoBannerId != null">
+                    twoBannerId = #{u.twoBannerId},
+                </if>
+                <if test="u.oneBannerId != null">
+                    oneBannerId = #{u.oneBannerId},
+                </if>
+                <if test="u.totalHour != null">
+                    totalHour = #{u.totalHour},
+                </if>
+                <if test="u.kkb != null">
+                    kkb = #{u.kkb},
+                </if>
+                <if test="u.hsxs != null">
+                    hsxs = #{u.hsxs} ,
+                </if>
+                <if test="u.kl != null">
+                    kl = #{u.kl} ,
+                </if>
+                <if test="u.kc != null">
+                    kc = #{u.kc} ,
+                </if>
+                <if test="u.kn != null">
+                    kn = #{u.kn} ,
+                </if>
+                <if test="u.kw != null">
+                    kw = #{u.kw} ,
+                </if>
+                <if test="u.kProjectSchedule != null">
+                    kProjectSchedule = #{u.kProjectSchedule} ,
+                </if>
+                <if test="u.kmb != null">
+                    kmb = #{u.kmb} ,
+                </if>
+                <if test="u.kwcl != null">
+                    kwcl = #{u.kwcl} ,
+                </if>
+                <if test="u.rwcl != null">
+                    rwcl = #{u.rwcl} ,
+                </if>
+                <if test="u.wwcl != null">
+                    wwcl = #{u.wwcl} ,
+                </if>
+                <if test="u.personKCulture != null">
+                    personKCulture = #{u.personKCulture} ,
+                </if>
+                <if test="u.teamKCulture != null">
+                    teamKCulture = #{u.teamKCulture} ,
+                </if>
+                <if test="u.teamKCultureFinishRate != null">
+                    teamKCultureFinishRate = #{u.teamKCultureFinishRate} ,
+                </if>
+                <if test="u.jxTotalNum != null">
+                    jxTotalNum = #{u.jxTotalNum}
+                </if>
+            </set>
+            WHERE id = #{u.id}
+        </foreach>
+
+    </update>
+
+
+
+    <update id="updateAll" parameterType="com.magic.ereal.business.entity.UsersStatistics">
+        update users_statistics set
+        totalHour = #{totalHour} ,
+        kkb = #{kkb} ,
+        hsxs = #{hsxs} ,
+        kl = #{kl} ,
+        kc = #{kc} ,
+        kmb = #{kmb} ,
+        kwcl = #{kwcl} ,
+        rwcl = #{rwcl} ,
+        wwcl = #{wwcl} ,
+        personKCulture = #{personKCulture} ,
+        teamKCulture = #{teamKCulture} ,
+        teamKCultureFinishRate = #{teamKCultureFinishRate} ,
+        jxTotalNum = #{jxTotalNum}
+        where startTime = #{startTime}
+        and endTime = #{endTime}
+        and `type` = #{type}
+        <if test="type == 1">
+            and userId = #{userId}
+        </if>
+        <if test="type == 2">
+            and departmentId = #{departmentId}
+        </if>
+    </update>
+
+    <select id="info" resultMap="BaseResult">
+        select us.*,ust.threeVeidooScore from users_statistics us
+        LEFT JOIN users_statistics_three ust ON us.id = ust.userStatisticsId
+        LEFT JOIN three_veidoo tv ON ust.threeVeidooId = tv.id
+        WHERE  us.id = #{id}
+    </select>
+
+
+    <select id="getStatistics" resultMap="BaseResult">
+        select us.*,ust.threeVeidooScore ,tv.targetName AS threeVeidooName,
+        tv.id AS threeVeidooId,us.id AS userStatisticsId ,ust.msg AS msg
+        from users_statistics us
+        LEFT JOIN users_statistics_three ust ON us.id = ust.userStatisticsId
+        LEFT JOIN three_veidoo tv ON ust.threeVeidooId = tv.id
+        WHERE
+        us.startTime = #{startTime} AND us.endTime = #{endTime}
+
+        <if test="type == 1">
+            AND us.userId = #{userId}
+            AND us.type = #{type}
+        </if>
+        <if test="type == 2">
+            AND us.departmentId = #{departmentId}
+            AND us.type = #{type}
+        </if>
+        <!--<if test="type == 3">
+            AND us.d
+        </if>-->
+    </select>
+
+
+
+    <select id="getStatisticsList" resultMap="BaseResult">
+        select us.*,ust.threeVeidooScore ,d.departmentName AS departmentName
+        <if test="type == 2">
+            , u.`name` AS userName ,u.avatar
+        </if>
+        from
+        department d,
+        <if test="type == 2">
+            users u,
+        </if>
+        users_statistics us
+        LEFT JOIN users_statistics_three ust ON us.id = ust.userStatisticsId
+        LEFT JOIN three_veidoo tv ON ust.threeVeidooId = tv.id
+        WHERE
+        us.startTime = #{startTime} AND us.endTime = #{endTime}
+        <if test="type == 3">
+            and d.id = us.departmentId
+        </if>
+        <if test="type == 2">
+            and us.userId = u.id
+            and u.department_id = d.id
+            and d.id = #{departmentId}
+        </if>
+        <if test="companyId != null">
+            and d.companyId = #{companyId}
+        </if>
+    </select>
+
+
+
+    <!-- 获取公司所有人的数据 -->
+    <select id="getStatisticsCompanyList" resultMap="BaseResult">
+        select us.*,ust.threeVeidooScore ,d.departmentName AS departmentName
+        , u.`name` AS userName ,u.avatar
+        from
+        department d, users u,
+        users_statistics us
+        LEFT JOIN users_statistics_three ust ON us.id = ust.userStatisticsId
+        LEFT JOIN three_veidoo tv ON ust.threeVeidooId = tv.id
+        WHERE
+        us.startTime = #{startTime} AND us.endTime = #{endTime}
+        and d.id = u.department_id
+        and us.userId = u.id
+        and d.companyId = #{companyId}
+    </select>
+
+    <!-- 获取部门所有人的数据 -->
+    <select id="getStatisticsDepartmentList" resultMap="BaseResult">
+        select us.*,ust.threeVeidooScore ,d.departmentName AS departmentName
+        , u.`name` AS userName ,u.avatar
+        from
+        department d, users u,
+        users_statistics us
+        LEFT JOIN users_statistics_three ust ON us.id = ust.userStatisticsId
+        LEFT JOIN three_veidoo tv ON ust.threeVeidooId = tv.id
+        WHERE
+        us.startTime = #{startTime} AND us.endTime = #{endTime}
+        and d.id = u.department_id
+        and us.userId = u.id
+        and d.id = #{departmentId}
+    </select>
+
+
+    <select id="statisticsGoodTeam" resultType="com.magic.ereal.business.entity.GoodTeam">
+        SELECT
+        d.id AS departmentId,
+        d.departmentName AS departmentName,
+        us.jxTotalNum AS score,
+        us.startTime AS `month`
+        FROM
+        department d,
+        users_statistics us
+        WHERE
+        d.id = us.departmentId
+        AND us.startTime = #{startTime}
+        AND us.endTime = #{endTime}
+        AND us.type = 2
+        AND us.jxTotalNum >= 100
+    </select>
+
+
+    <!-- 数据公示 三维绩效考核得分 统计 -->
+    <select id="getCompanySta" resultMap="BaseResult" >
+        select us.* ,d.departmentName AS departmentName
+        from
+        department d,
+        users_statistics us
+        LEFT JOIN users_statistics_three ust ON us.id = ust.userStatisticsId
+        LEFT JOIN three_veidoo tv ON ust.threeVeidooId = tv.id
+        WHERE
+        us.startTime = #{startTime} AND us.endTime = #{endTime}
+        and us.type = 2
+        and d.id = us.departmentId
+        <if test="companyId != null">
+            and d.companyId = #{companyId}
+        </if>
+
+    </select>
+
+
+
+
+    <select id="queryTeamKCulture" resultType="com.magic.ereal.business.entity.UserK">
+        SELECT
+        d.departmentName AS `name`,
+        d.id AS id,
+        SUM((IFNULL(IF(
+        u.role_id = 12,
+        (SELECT
+        SUM(
+        IF((SELECT COUNT(*) FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) AND projectId = p.id)
+        > 0,
+        (SELECT score FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) ORDER BY createTime DESC LIMIT 0,1)
+        ,
+        (SELECT score FROM project_acceptancerecord WHERE type=1 AND `status`=12 AND projectId=p.id
+        ORDER BY createTime DESC LIMIT 0,1)
+        )
+        ) / COUNT(*)
+        * 30 / 70
+        FROM project p
+        WHERE
+        p.departmentId=u.department_id
+        AND
+        (p.`status`=5008 OR p.`status`=5007 OR p.`status`=5006)
+        AND p.overTime BETWEEN  #{startTime} AND #{endTime}
+        ),
+        IF(
+        (SELECT sp_isProjectDepartment(u.id,#{startTime}))=1,
+        (SELECT
+
+        IF((SELECT COUNT(*) FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) AND projectId = p.id)
+        > 0,
+        (SELECT score FROM project_acceptancerecord WHERE type = 2 AND `status` IN (1,2) ORDER BY createTime DESC LIMIT 0,1)
+        ,
+        (SELECT score FROM project_acceptancerecord WHERE type=1 AND `status`=12 AND projectId=p.id
+        ORDER BY createTime DESC LIMIT 0,1)
+        )
+        / COUNT(*) * 30 / 70
+        FROM project p,project_group_user pgu
+        WHERE
+        p.projectGroupId=pgu.projectGroupId
+        AND pgu.userId=u.id
+        AND
+        (p.`status`=5008 OR p.`status`=5007 OR p.`status`=5006)
+        AND p.overTime BETWEEN  #{startTime} AND #{endTime}
+        )
+        ,
+        (SELECT
+        SUM(IFNULL(kg.score,0))
+        FROM three_veidoo_kg kg
+        WHERE
+        kg.userId=u.id
+        AND kg.startTime = #{startTime} AND kg.endTime = #{endTime}
+        )
+        )
+        ),0) +
+
+        IFNULL(
+        IF(
+        IFNULL(((sp_duty_ok(#{startTime},u.id) - sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id))
+        / (sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH) ,u.id)* 0.01)
+        ),0) >
+        ((IFNULL(sp_duty_ok(#{startTime},u.id),0) - (SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+        WHERE uu.department_id = dd.id AND dd.companyId = #{ccId} AND uu.Incumbency = 2))
+        /
+        ((SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+        WHERE uu.department_id = dd.id AND dd.companyId = #{ccId} AND uu.Incumbency = 2) * 0.01))
+        ,
+        IFNULL(((sp_duty_ok(#{startTime},u.id) - sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id))
+        / (sp_duty_ok(DATE_SUB(#{startTime},INTERVAL 1 MONTH),u.id) * 0.01)
+        ),0)
+        ,
+        ((IFNULL(sp_duty_ok(#{startTime},u.id),0) - (SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+        WHERE uu.department_id = dd.id AND dd.companyId = #{ccId} AND uu.Incumbency = 2))
+        /
+        ((SELECT SUM(IFNULL(sp_duty_ok(#{startTime},uu.id),0)) FROM users uu,department dd
+        WHERE uu.department_id = dd.id AND dd.companyId = #{ccId} AND uu.Incumbency = 2) * 0.01))
+        ),0) +
+        (
+        (SELECT
+        IFNULL(
+        IF ((SUM(UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) >= 8, 4,
+        (4 - (8-(SUM(UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600)) / 2) ),0 )
+        FROM
+        work_diary wd,
+        work_diary_sub wds,
+        job_type jt,
+        transactionsub sb
+        WHERE
+        wd.id = wds.workDiaryId
+        AND wds.jobTypeId = jt.id
+        AND jt.transactionSubId = sb.id
+        AND sb.transactionTypeId = 3
+        AND wd.userId = u.id
+        AND wd.workTime BETWEEN #{startTime} AND #{endTime})
+        +
+        IF(
+        (SELECT
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=6 AND userId=u.id
+        AND  startTime = #{startTime} AND endTime = #{endTime} ),0)) * 0.6 = 0, 6,
+        (SELECT
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=6 AND userId=u.id
+        AND  startTime = #{startTime} AND endTime = #{endTime} ),0)) * 0.6
+
+        )
+
+        ) +
+
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=3 AND userId=u.id
+        AND startTime = #{startTime} AND endTime = #{endTime}),(SELECT weight FROM three_veidoo WHERE id = 3)) +
+
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=4 AND userId=u.id
+        AND startTime = #{startTime} AND endTime = #{endTime}),0) +
+
+        IFNULL((SELECT score FROM three_veidoo_score WHERE threeVerdooId=5 AND userId=u.id
+        AND startTime = #{startTime} AND endTime = #{endTime}),(SELECT weight FROM three_veidoo WHERE id = 5))) * 0.6 +
+        IFNULL((
+        SELECT SUM(IFNULL(score,0)) FROM  three_veidoo_kg WHERE type=1 AND userId=u.id AND startTime = #{startTime} AND endTime = #{endTime}
+        ),0) * 0.4) / (SELECT COUNT(0) FROM users WHERE department_id = d.id) AS userK
+
+        FROM
+        users u,department d
+        WHERE u.department_id = d.id
+        AND u.role_id NOT IN (1)
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+        <if test="userId != null">
+            AND u.id = #{userId}
+        </if>
+        GROUP BY d.id
+        ORDER BY userK DESC
+    </select>
+
+
+
+
+    <select id="queryteamKCultureFinishRate" resultType="com.magic.ereal.business.entity.UserK">
+        SELECT
+        d.departmentName AS `name`,
+        us.teamKCultureFinishRate AS userK
+        FROM
+        department d
+        LEFT JOIN users_statistics us ON us.departmentId = d.id
+        LEFT JOIN company c ON d.companyId = c.id
+        WHERE
+        1=1
+        <if test="companyId != null">
+            AND c.id = #{companyId}
+        </if>
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+        <if test="startTime != null and endTime != null">
+            AND us.startTime = #{startTime} AND us.endTime = #{endTime}
+        </if>
+        GROUP BY d.id
+    </select>
+
+
+
+    <select id="queryTeamKFinishRate" resultType="com.magic.ereal.business.entity.UserK">
+        SELECT
+            d.departmentName AS `name`,
+            (SUM(
+                        IFNULL((SELECT sp_project_kw(u.id,#{startTime},#{endTime})),0) +
+                        IFNULL((SELECT sp_kn(u.id,#{startTime},#{endTime})),0) +
+                        IFNULL((SELECT sp_kls(u.id,#{startTime},#{endTime})),0) * (SELECT sp_zh_xh(u.id,#{startTime},#{endTime})) +
+                        IFNULL((SELECT sp_count_kc(u.id,#{startTime},#{endTime})),0) * (SELECT sp_zh_xh(u.id,#{startTime},#{endTime}))
+                ) / SUM(IFNULL((SELECT kTarget FROM allconfig),1.6)  * (SELECT sp_zh_xh(u.id,#{startTime},#{endTime})))
+        ) AS userK
+                FROM
+                    department d,
+                    users u
+                WHERE
+                    u.department_id = d.id
+                    <if test="companyId != null">
+                        AND d.companyId = #{companyId}
+                    </if>
+
+                    <if test="departmentId != null">
+                        AND d.id = #{departmentId}
+                    </if>
+                GROUP BY
+                    d.id
+                ORDER BY userK DESC
+    </select>
+
+
+
+
+
+    <select id="queryteamPostProjectFinishRate" resultType="com.magic.ereal.business.entity.UserK">
+        SELECT
+        d.departmentName AS `name`,
+        SUM(IFNULL(us.rwcl,0))AS userK
+        FROM
+        department d
+        LEFT JOIN users_statistics us ON us.departmentId = d.id
+        <if test="startTime != null and endTime != null">
+            AND us.startTime = #{startTime} AND us.endTime = #{endTime}
+        </if>
+        LEFT JOIN banner b ON b.id = us.twoBannerId AND b.`status` = 1
+        LEFT JOIN company c ON d.companyId = c.id
+        WHERE
+        1=1
+        <if test="companyId != null">
+            AND c.id = #{companyId}
+        </if>
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+
+        GROUP BY d.id
+        ORDER BY userK DESC
+    </select>
+
+
+
+    <select id="querypersonKCulture" resultType="com.magic.ereal.business.entity.UserK">
+        SELECT
+        u.`name` AS `name`,
+        us.personKCulture AS userK
+        FROM
+        department d,
+        company c,
+        users u
+        LEFT JOIN users_statistics us ON us.userId = u.id
+        WHERE
+        u.department_id = d.id
+        AND d.companyId = c.id
+        <if test="companyId != null">
+            AND c.id = #{companyId}
+        </if>
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+        <if test="userId != null">
+            AND u.id = #{userId}
+        </if>
+        <if test="startTime != null and endTime != null">
+            AND us.startTime = #{startTime} AND us.endTime = #{endTime}
+        </if>
+    </select>
+
+    <select id="goodTeamAwards" resultType="com.magic.ereal.business.entity.Awards">
+        SELECT
+        '三维绩效奖(团队)' AS awardsName,
+        us.startTime AS `time`
+        FROM
+        department d,
+        users u,
+        users_statistics us
+        WHERE
+        d.id = us.departmentId
+        AND u.department_id = d.id
+        AND us.type = 2
+        AND us.jxTotalNum >= 100
+        AND u.id = #{userId}
+    </select>
+
+    <select id="getTotalAchievementsOfOne" resultType="com.magic.ereal.business.entity.TotalAchievements">
+        SELECT
+            d.id AS departmentId,
+            d.departmentName,
+            SUM(
+                IFNULL(us.kw, 0) + IFNULL(us.kn, 0) + IFNULL(us.kc, 0) + IFNULL(us.kl, 0)
+            ) AS actualK,
+            SUM(IFNULL(us.kmb, 0)) AS targetK,
+            us.kwcl AS kSchedule
+        FROM
+            department d,
+            users u,
+            users_statistics us,
+            banner b
+        WHERE
+            d.companyId = #{companyId}
+        AND d.id = u.department_id
+        AND us.userId = u.id
+        AND us.startTime = #{startTime}
+        AND us.endTime = #{endTime}
+        AND us.oneBannerId = b.id
+        AND b.`status` = 1
+        AND u.role_id NOT IN (1)
+        GROUP BY
+            d.id
+    </select>
+
+
+    <select id="getTotalAchievementsOfTwo" resultType="com.magic.ereal.business.entity.TotalAchievements">
+
+        SELECT
+            d.id AS departmentId,
+            d.departmentName,
+            IF((SELECT sp_isProjectDepartment(u.id,#{startTime}))=1 ,
+                SUM(IFNULL(us.rwcl,0)),
+                SUM(IFNULL(us.rwcl,0)) / (SELECT COUNT(0) FROM users_statistics uss
+                                                    WHERE uss.departmentId = d.id AND uss.startTime = #{startTime}
+														  AND uss.endTime = #{endTime} )
+            ) AS kProjectSchedule,
+            IF((SELECT sp_isProjectDepartment(u.id,#{startTime}))=1 ,
+                    SUM(IFNULL(us.targetNum,0)),
+                    SUM(IFNULL(us.targetNum,0)) / (SELECT COUNT(0) FROM users_statistics uss
+                                                    WHERE uss.departmentId = d.id AND uss.startTime = #{startTime}
+														  AND uss.endTime = #{endTime} )
+                ) AS targetJX,
+            IF((SELECT sp_isProjectDepartment(u.id,#{startTime}))=1 ,
+                    SUM(IFNULL(us.actualNum,0)),
+                    SUM(IFNULL(us.actualNum,0)) / (SELECT COUNT(0) FROM users_statistics uss
+                                                    WHERE uss.departmentId = d.id AND uss.startTime = #{startTime}
+														  AND uss.endTime = #{endTime} )
+                ) AS actualJX
+        FROM
+            department d,
+            users u,
+            users_statistics us,
+            banner b
+        WHERE
+            d.companyId = #{companyId}
+        AND d.id = u.department_id
+        AND us.userId = u.id
+        AND us.startTime = #{startTime}
+        AND us.endTime = #{endTime}
+        AND us.twoBannerId = b.id
+        AND b.`status` = 1
+        AND u.role_id NOT IN (1)
+        GROUP BY
+            d.id
+
+    </select>
+
+    <!-- 数据公示 三维绩效考核得分 统计 -->
+    <select id="getTotalAchievements" resultType="com.magic.ereal.business.entity.TotalAchievements" >
+        select
+        /* 部门名 */
+        d.departmentName AS departmentName,
+        /* 一维 k值完成 start */
+
+        /* 实际k值 */
+        us.kw + us.kn AS actualK,
+        /* 目标k值 */
+        us.kmb AS targetK,
+        /* k值完成率 */
+        us.kwcl AS kSchedule,
+        /* 得分 */
+        us.kwcl * 0.5 AS oneScore,
+
+        /* 一维 k值完成 end */
+
+
+        /* 二维 任务完成 start */
+
+        /* 实际结项 */
+        (
+        SELECT
+
+        IF (
+            (
+            SELECT
+            u.id
+            FROM
+            users u
+            WHERE
+            u.role_id = 12
+            AND u.department_id = d.id
+            ) IS NULL,
+            (
+            SELECT
+
+            IF (
+            sv.method = 1,
+            (
+            SELECT
+            COUNT(*)
+            FROM
+            second_target s
+            WHERE
+            s.isApproved = 1
+            AND s.departmentId = d.id
+            AND s.startTime = #{startTime} AND s.endTime = #{endTime}
+            ),
+            (
+            SELECT
+            s.managerGrade * sv.weightManager + s.dutyGrade * sv.dutyManager
+            FROM
+            second_target s
+            WHERE
+            s.departmentId = d.id
+            AND s.startTime = #{startTime} AND s.endTime = #{endTime}
+            GROUP BY s.departmentId
+            )
+            )
+            FROM
+            second_veidoo sv
+            WHERE
+            sv.type = 1
+            ),
+        (
+        SELECT
+
+        IF (
+        sv.method = 1,
+        us.rwcl * stJX.targetNumS / 100,
+        (us.kn + us.kw) / (1.7 * 0.7)
+        ) AS jxs
+        FROM
+        second_veidoo sv
+        WHERE
+        sv.type = 2
+        )
+        )
+        ) AS actualJX,
+        /* 目标任务 */
+        stJX.targetNumS AS targetJX,
+        /* 结项完成率 */
+        us.rwcl AS kProjectSchedule,
+
+        /* 得分 */
+        us.rwcl * 0.3 AS twoScore,
+
+        /* 二维 任务完成 end */
+
+        /* 三维 文化工程 start */
+
+        /* 团队得分 */
+        us.teamKCulture AS teamScore,
+        /* 得分 */
+        us.teamKCultureFinishRate * 0.2 AS threeScore
+
+        /* 三维 文化工程 end */
+        from
+        department d LEFT JOIN
+        users_statistics us ON d.id = us.departmentId
+        AND us.startTime = #{startTime} AND us.endTime = #{endTime}
+        LEFT JOIN
+        (select SUM(st.targetNum) as targetNumS,st.departmentId from second_target st
+        WHERE
+        DATE_FORMAT(st.targetTime, '%Y-%m') = DATE_FORMAT(#{startTime}, '%Y-%m')) AS stJX
+        ON stJX.departmentId = d.id
+        WHERE
+        1=1
+        <if test="companyId != null">
+            and d.companyId = #{companyId}
+        </if>
+        group by d.id
+    </select>
+
+
+
+    <select id="statisticsWorkTime" resultType="com.magic.ereal.business.entity.UserK">
+
+        SELECT
+        (SELECT
+        SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600)
+        FROM
+        work_diary wd,
+        work_diary_sub wds,
+        transactiontype ty,
+        transactionsub ts
+        WHERE
+        wds.workDiaryId = wd.id
+        AND wds.transactionSubId = ts.id
+        AND wd.status =  4004
+        AND ty.id = ts.transactionTypeId
+        <if test="type == 0">
+            AND ty.id = 1
+        </if>
+        <if test="type == 1">
+            AND ty.id = 2
+        </if>
+        <if test="startTime != null">
+            AND DATE_FORMAT(wd.workTime,'%Y-%m-%d') >= DATE_FORMAT(#{startTime},'%Y-%m-%d')
+        </if>
+        <if test="endTime != null">
+            <![CDATA[
+                AND DATE_FORMAT(wd.workTime,'%Y-%m-%d') <= DATE_FORMAT(#{endTime},'%Y-%m-%d')
+                 ]]>
+        </if>
+        <if test="type == 2">
+            AND ty.id = 3
+        </if>
+        <if test="type == 3">
+            AND ty.id IN (1,2)
+        </if>
+
+        AND wd.userId = u.id) AS `userK`,
+        u.`name` AS `name`
+
+        FROM
+        users u,
+        department d,
+        company c
+        WHERE  u.department_id=d.id
+        AND u.role_id NOT IN (1)
+        AND d.companyId=c.id
+        AND u.Incumbency NOT IN (3)
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+        <if test="companyId != null">
+            AND c.id = #{companyId}
+        </if>
+        ORDER BY `userK` DESC
+
+    </select>
+
+
+
+
+</mapper>

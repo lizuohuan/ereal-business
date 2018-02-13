@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IMonthDaysUserMapper">
+
+
+    <select id="countDaysOfUser" resultType="java.lang.Integer" parameterType="map">
+
+        SELECT
+            IFNULL(md.days,22) -
+                (
+                IFNULL(CASE  WHEN  mdu.type = 1 THEN SUM(mdu.dayNum) END,0)
+            )
+            -
+            (
+                IFNULL(CASE  WHEN  mdu.type = 3 THEN SUM(mdu.dayNum) END,0)
+            )
+            -
+            (
+                IFNULL(CASE  WHEN  mdu.type = 4 THEN SUM(mdu.dayNum) END,0)
+            )
+
+        FROM
+            month_days md,
+            month_days_user mdu
+        WHERE
+            md.id = mdu.monthDaysId
+        AND DATE_FORMAT(dateTime, '%Y-%m') = DATE_FORMAT(#{month}, '%Y-%m')
+        AND mdu.userId = #{userId}
+
+    </select>
+
+   <select id="list" resultType="com.magic.ereal.business.entity.MonthDaysUser" parameterType="map">
+        SELECT
+            m.*, u.`name` AS userName,
+            md.dateTime,d.id AS departmentId,d.companyId
+        FROM
+            month_days_user m,
+            users u,
+            month_days md,
+            department d
+        WHERE
+            u.id = m.userId
+            AND md.id = m.monthDaysId
+            AND u.department_id = d.id
+            AND d.isValid = 1
+            <if test="m.userId != null">
+                AND m.userId = #{m.userId}
+            </if>
+            <if test="m.type != null">
+                AND m.`type` = #{m.type}
+            </if>
+            <if test="m.monthDaysId != null">
+                AND m.`monthDaysId` = #{m.monthDaysId}
+            </if>
+            <if test="source == 0">
+                AND m.type NOT IN (2,3,4)
+            </if>
+            <if test="source == 1">
+                AND m.type NOT IN (1)
+            </if>
+        ORDER BY m.id DESC
+            <if test="limit != null and limitSize != null">
+                LIMIT #{limit},#{limitSize}
+            </if>
+   </select>
+
+
+   <select id="countList" resultType="java.lang.Integer" parameterType="map">
+        SELECT
+            COUNT(*)
+        FROM
+            month_days_user m,
+            users u
+        WHERE
+            u.id = m.userId
+            <if test="m.userId != null">
+                AND m.userId = #{m.userId}
+            </if>
+            <if test="m.type != null">
+                AND m.`type` = #{m.type}
+            </if>
+            <if test="m.monthDaysId != null">
+                AND m.`monthDaysId` = #{m.monthDaysId}
+            </if>
+           <if test="source == 0">
+               AND m.type NOT IN (2,3,4)
+           </if>
+           <if test="source == 1">
+               AND m.type NOT IN (1)
+           </if>
+   </select>
+
+
+
+
+    <insert id="save" parameterType="com.magic.ereal.business.entity.MonthDaysUser" keyProperty="id" useGeneratedKeys="true">
+      insert into month_days_user (userId, monthDaysId, dayNum, type)
+      values (#{userId},#{monthDaysId},#{dayNum},#{type});
+    </insert>
+
+    <update id="update" parameterType="com.magic.ereal.business.entity.MonthDaysUser">
+        update month_days_user
+        <set>
+            <if test="userId != null">
+                userId = #{userId},
+            </if>
+            <if test="monthDaysId != null">
+                monthDaysId = #{monthDaysId},
+            </if>
+            <if test="dayNum != null">
+                dayNum = #{dayNum},
+            </if>
+            <if test="type != null">
+                type = #{type},
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+
+    <select id="info"  resultType="com.magic.ereal.business.entity.MonthDaysUser">
+         select * from month_days_user m
+          WHERE m.monthDaysId = #{monthDaysId}
+          AND m.userId = #{userId}
+          AND m.type = #{type}
+    </select>
+</mapper>

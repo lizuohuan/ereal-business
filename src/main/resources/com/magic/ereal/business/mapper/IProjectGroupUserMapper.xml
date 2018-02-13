@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IProjectGroupUserMapper" >
+
+
+    <delete id="delUserForProjectGroup">
+        DELETE FROM `project_group_user` WHERE userId=#{userId} AND projectGroupId=#{projectGroupId}
+    </delete>
+
+    <insert id="batchAddProjectGroupUser">
+        INSERT INTO `project_group_user` (`userId`,`projectGroupId`)
+        VALUES 
+        <foreach collection="projectGroupUsers" index="index" item="projectGroupUser" separator=",">
+            (#{projectGroupUser.userId},#{projectGroupUser.projectGroupId})
+        </foreach>
+    </insert>
+
+    <insert id="addProjectGroupUser">
+        INSERT INTO `project_group_user` (`userId`,`projectGroupId`)
+        VALUES
+        (#{projectGroupUser.userId},#{projectGroupUser.projectGroupId})
+    </insert>
+
+    <select id="queryUserByProjectGroupId" resultType="com.magic.ereal.business.entity.User">
+        SELECT
+            u.id,
+			u.account,
+			u.`name`,
+			u.role_id,
+			u.avatar,
+			u.phone,
+			u.department_id,
+			u.token,
+			u.deviceType,
+			u.deviceToken
+        FROM
+            users u
+        WHERE
+            u.id IN (
+                SELECT
+                    userId
+                FROM
+                    project_group_user
+                WHERE
+                    projectGroupId = #{projectGroup}
+            )
+    </select>
+
+    <delete id="delete">
+        DELETE FROM project_group_user WHERE projectGroupId = #{projectGroupId}
+    </delete>
+
+</mapper>

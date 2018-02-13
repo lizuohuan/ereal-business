@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IProjectInteriorWeekKAllocationMapper" >
+
+
+
+
+    <select id="queryExcelUserKByProject" resultType="com.magic.ereal.business.entity.ExcelUserK">
+        SELECT
+            u.`name` AS userName,
+            (
+            	SELECT
+                    SUM(pkk.k)
+                FROM
+                    project_interior_week_acceptance pweek,
+                    project_interior_week_k_allocation pkk
+                WHERE pkk.weekId = pweek.id
+                AND pweek.projectInteriorId = p.id
+                AND pkk.userId = u.id
+
+            ) AS k,
+            SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) AS `time`,
+            pk.userId,
+            IF(pg.projectManagerId = u.id , 1 ,0) AS isManager
+        FROM
+            project_interior_week_k_allocation pk
+        LEFT JOIN users u ON pk.userId = u.id
+         LEFT JOIN project_interior_week_acceptance pweek ON pweek.id = pk.weekId
+        LEFT JOIN  project_interior p ON pweek.projectInteriorId = p.id
+        LEFT JOIN project_group_user pgu ON p.projectGroupId = pgu.projectGroupId AND pgu.userId = u.id
+        LEFT JOIN project_group pg ON pg.id = pgu.projectGroupId
+        LEFT JOIN work_diary wd ON  wd.userId = u.id
+        LEFT JOIN work_diary_sub wds ON wd.id = wds.workDiaryId AND wds.jobTypeId = p.id AND wds.transactionSubId = 3
+
+        WHERE
+            pk.weekId = #{weekId}
+        GROUP BY u.id
+
+    </select>
+
+
+    <select id="queryExcelUserK" resultType="com.magic.ereal.business.entity.ExcelUserK">
+        SELECT
+            u.`name` AS userName,
+            pk.k,
+            SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) AS `time`,
+            pk.userId,
+            IF(pg.projectManagerId = u.id , 1 ,0) AS isManager
+        FROM
+            project_interior_week_k_allocation pk
+        LEFT JOIN users u ON pk.userId = u.id
+         LEFT JOIN project_interior_week_acceptance pweek ON pweek.id = pk.weekId
+        LEFT JOIN  project_interior p ON pweek.projectInteriorId = p.id
+        LEFT JOIN project_group_user pgu ON p.projectGroupId = pgu.projectGroupId AND pgu.userId = u.id
+        LEFT JOIN project_group pg ON pg.id = pgu.projectGroupId
+        LEFT JOIN work_diary wd ON  wd.userId = u.id
+        LEFT JOIN work_diary_sub wds ON wd.id = wds.workDiaryId AND wds.jobTypeId = p.id AND wds.transactionSubId = 3
+
+        WHERE
+            pk.weekId = #{weekId}
+        GROUP BY u.id
+
+    </select>
+
+    <insert id="batchAddProjectInteriorWeekKAllocation">
+        INSERT INTO `project_interior_week_k_allocation`
+        (`userId`,`ratio`,`k`,`weekId`,`createTime`)
+        VALUES
+        <foreach collection="allocations" item="allocation" index="index" separator=",">
+            (#{allocation.userId},#{allocation.ratio},#{allocation.k},#{allocation.weekId},now())
+        </foreach>
+    </insert>
+
+
+    <select id="queryAllocationByWeek" resultType="com.magic.ereal.business.entity.ProjectInteriorWeekKAllocation">
+        SELECT
+            p.*, u.`name` AS userName,
+        IF ( pg.projectManagerId = u.id, 1, 0 ) AS isManager
+        FROM
+            `project_interior_week_k_allocation` p
+        LEFT JOIN `users` u ON u.id = p.userId
+        LEFT JOIN project_interior_week_acceptance pweek ON pweek.id = p.weekId
+        LEFT JOIN project_interior pp ON pp.id = pweek.projectInteriorId
+        LEFT JOIN project_group_user pgu ON pgu.projectGroupId = pp.projectGroupId
+        LEFT JOIN project_group pg ON pgu.projectGroupId = pg.id
+        WHERE
+            p.`weekId` = #{weekId}
+        GROUP BY
+            u.id
+    </select>
+
+
+</mapper>

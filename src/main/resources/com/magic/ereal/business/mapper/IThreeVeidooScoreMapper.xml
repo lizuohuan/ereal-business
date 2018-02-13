@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IThreeVeidooScoreMapper" >
+
+
+    <select id="queryThreeVeidooScoreByUserMap" resultType="com.magic.ereal.business.entity.UsersStatisticsThree"
+            parameterType="map">
+        SELECT
+            tvs.msg AS msg,
+            IFNULL(tvs.endTime,#{endTime}) AS endTime,
+            IFNULL(tvs.startTime,#{startTime}) AS startTime,
+            tv.targetName AS threeVeidooName,
+            IFNULL(tvs.userId,#{userId}) AS userId,
+            tv.id AS threeVeidooId,
+            CASE tv.id WHEN 4 THEN IFNULL(tvs.score, 0)
+            ELSE IFNULL(tvs.score, tv.weight) END
+             AS threeVeidooScore
+        FROM
+            three_veidoo tv
+        LEFT JOIN three_veidoo_score tvs ON tv.id = tvs.threeVerdooId
+        AND tvs.userId = #{userId}
+        AND tvs.startTime = #{startTime} AND tvs.endTime = #{endTime}
+    </select>
+
+
+    <select id="queryThreeVeidooScoreByUserWeb" resultType="com.magic.ereal.business.entity.ThreeVeidooScore">
+        SELECT tvs.* FROM  three_veidoo_score tvs WHERE tvs.userId = #{userId} AND tvs.startTime = #{startTime}
+        AND tvs.endTime = #{endTime} AND tvs.threeVerdooId=#{threeVeidooId}
+    </select>
+
+
+
+    <select id="queryThreeVeidooScoreByUser" resultType="com.magic.ereal.business.entity.ThreeVeidooScore">
+        SELECT * FROM  `three_veidoo_score` tvs
+        WHERE  tvs.userId=#{userId}
+        AND DATE_FORMAT(tvs.startTime,'%Y-%m-%d') = DATE_FORMAT(#{startTime},'%Y-%m-%d')
+        AND DATE_FORMAT(tvs.endTime,'%Y-%m-%d') = DATE_FORMAT(#{endTime},'%Y-%m-%d')
+    </select>
+
+
+
+    <select id="queryThreeVeidooScoreByMap" resultType="com.magic.ereal.business.entity.ThreeVeidooSta" parameterType="map">
+        SELECT
+            tvs.id AS id,
+            tvs.score AS score,
+            tvs.msg AS msg
+        FROM
+            `three_veidoo_score` tvs,
+            three_veidoo tv
+        WHERE
+        tvs.threeVerdooId = tv.id
+        AND tvs.userId=#{userId}
+        AND tvs.startTime = #{startTime}
+        AND tvs.endTime= #{endTime}
+    </select>
+
+
+    <select id="queryThreeVeidooScoreByDepartment" resultType="com.magic.ereal.business.entity.ThreeVeidooScore">
+        SELECT * FROM  `three_veidoo_score` tvs
+        WHERE  1=1
+        <if test="departmentId != null ">
+            AND tvs.userId IN (SELECT  id FROM users WHERE  department_id=#{departmentId})
+        </if>
+        <if test="startTime != null and endTime != null">
+            AND DATE_FORMAT(tvs.startTime,'%Y-%m-%d') = DATE_FORMAT(#{startTime},'%Y-%m-%d')
+            AND DATE_FORMAT(tvs.endTime,'%Y-%m-%d') = DATE_FORMAT(#{endTime},'%Y-%m-%d')
+        </if>
+    </select>
+
+    <select id="countThreeVeidooScore" resultType="java.lang.Integer">
+        SELECT
+            COUNT(*)
+        FROM
+            three_veidoo_score tvs,
+            three_veidoo tv,
+            users u,
+            users `c`,
+            department d
+        WHERE
+            tvs.threeVerdooId=tv.id
+            AND tvs.userId=u.id
+            AND tvs.createUserId=c.id
+            AND u.department_id = d.id
+        <if test="departmentId != null">
+            AND u.id IN (SELECT id FROM users WHERE department_id = #{departmentId})
+        </if>
+        <if test="userId != null">
+            AND u.id = #{userId}
+        </if>
+        <if test="startTime != null and endTime != null">
+            AND DATE_FORMAT(tvs.startTime,'%Y-%m-%d') = DATE_FORMAT(#{startTime},'%Y-%m-%d')
+            AND DATE_FORMAT(tvs.endTime,'%Y-%m-%d') = DATE_FORMAT(#{endTime},'%Y-%m-%d')
+        </if>
+    </select>
+
+
+    <select id="queryThreeVeidooScore" resultType="com.magic.ereal.business.entity.ThreeVeidooScore">
+        SELECT
+            tvs.*,
+            u.`name` AS userName,
+            c.`name` AS createUserName,
+            tv.targetName AS targetName,
+            u.department_id AS departmentId,
+            d.companyId AS companyId
+        FROM
+            three_veidoo_score tvs,
+            three_veidoo tv,
+            users u,
+            users `c`,
+            department d
+        WHERE
+            tvs.threeVerdooId=tv.id
+            AND tvs.userId=u.id
+            AND tvs.createUserId=c.id
+            AND u.department_id = d.id
+
+        <if test="departmentId != null">
+            AND d.id = #{departmentId}
+        </if>
+        <if test="userId != null">
+            AND u.id = #{userId}
+        </if>
+        <if test="startTime != null and endTime != null">
+            AND DATE_FORMAT(tvs.startTime,'%Y-%m-%d') = DATE_FORMAT(#{startTime},'%Y-%m-%d')
+            AND DATE_FORMAT(tvs.endTime,'%Y-%m-%d') = DATE_FORMAT(#{endTime},'%Y-%m-%d')
+        </if>
+        ORDER BY tvs.id DESC
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+    </select>
+
+
+    <insert id="addThreeVeidooScore">
+        INSERT INTO `three_veidoo_score`
+        (`threeVerdooId`,`userId`,`score`,`createUserId`,`monthTime`,`createTime`,`startTime`,`endTime`,`msg`)
+        VALUES
+        (#{score.threeVerdooId},#{score.userId},#{score.score},#{score.createUserId},#{score.monthTime},NOW(),
+        #{score.startTime},#{score.endTime},#{score.msg})
+    </insert>
+
+
+    <insert id="batchAddThreeVeidooScore">
+        INSERT INTO `three_veidoo_score`
+        (`threeVerdooId`,`userId`,`score`,`createUserId`,`monthTime`,`createTime`,`startTime`,`endTime`,`msg`)
+        VALUES
+        <foreach collection="scores" index="index" item="score" separator=",">
+            (#{score.threeVerdooId},#{score.userId},#{score.score},#{score.createUserId},#{score.monthTime},NOW(),
+            #{score.startTime},#{score.endTime},#{score.msg})
+        </foreach>
+    </insert>
+
+
+    <update id="updateThreeVeidooScore">
+        UPDATE `three_veidoo_score`
+        <set>
+            <if test="score.msg != null">
+                `msg`=#{score.msg},
+            </if>
+            <if test="score.endTime != null">
+                `endTime`=#{score.endTime},
+            </if>
+            <if test="score.startTime != null">
+                `startTime`=#{score.startTime},
+            </if>
+            <if test="score.monthTime != null">
+                `monthTime`=#{score.monthTime},
+            </if>
+            <if test="score.score != null">
+                `score`=#{score.score},
+            </if>
+            <if test="score.userId != null">
+                `userId`=#{score.userId},
+            </if>
+            <if test="score.threeVerdooId != null">
+                `threeVerdooId`=#{score.threeVerdooId},
+            </if>
+        </set>
+        WHERE  `id`=#{score.id}
+    </update>
+
+
+
+</mapper>

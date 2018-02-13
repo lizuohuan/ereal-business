@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IDepartmentMapper" >
+
+
+    <resultMap id="BaseDepartment" type="com.magic.ereal.business.entity.Department">
+        <result column="id" property="id" javaType="java.lang.Integer"/>
+        <result column="departmentName" property="departmentName" javaType="java.lang.String"/>
+        <result column="companyName" property="companyName" javaType="java.lang.String"/>
+        <result column="companyId" property="companyId" javaType="java.lang.Integer"/>
+        <result column="type" property="type" javaType="java.lang.Integer"/>
+        <result column="isValid" property="isValid" javaType="java.lang.Integer"/>
+        <result column="isProjectDepartment" property="isProjectDepartment" javaType="java.lang.Integer"/>
+        <result column="createTime" property="createTime" javaType="java.util.Date"/>
+    </resultMap>
+
+
+    <resultMap id="DepartmentIncludeUser" type="com.magic.ereal.business.entity.Department" extends="BaseDepartment">
+        <association property="users" column="{departmentId=id,accreditType=accreditType,userId=userId}" select="com.magic.ereal.business.mapper.IUserMapper.queryUserByDepartment"/>
+    </resultMap>
+    <resultMap id="DepartmentIncludeProjectInterior" type="com.magic.ereal.business.entity.Department" extends="BaseDepartment">
+        <association property="interiors" column="{departmentId=id,year=year}" select="com.magic.ereal.business.mapper.IProjectInteriorMapper.excelProjectInterior"/>
+    </resultMap>
+
+    <select id="queryAllDepartment" resultMap="BaseDepartment">
+        SELECT d.id,d.departmentName,cc.companyName
+        FROM department d,company cc
+        WHERE d.isValid = 1
+        AND cc.id = d.companyId
+    </select>
+
+    <select id="getDepartmentByProject" resultMap="BaseDepartment">
+          <if test="isProject == 1">
+              SELECT
+                d.id,d.departmentName
+              FROM
+                department d
+              WHERE d.companyId = #{companyId}
+              AND d.isValid = 1
+              AND d.id NOT IN (
+                  (SELECT u.department_id FROM users u WHERE u.id = (SELECT p.bTeacherId FROM project p WHERE p.id = #{projectId})),
+                  (SELECT p.departmentId FROM project p WHERE p.id = #{projectId})
+              )
+              <!-- AND d.id  IN (SELECT u.department_id FROM users u,role r WHERE u.role_id = r.id AND r.`level` = 1 AND r.id = 12) -->
+          </if>
+
+        <if test="isProject == 0">
+            SELECT
+              d.id,d.departmentName
+            FROM
+              department d
+            WHERE d.companyId = #{companyId}
+            AND d.isValid = 1
+                AND d.id NOT IN (
+                    (SELECT u.department_id FROM users u WHERE u.id = (SELECT p.allocationUserId FROM project_interior p WHERE p.id = #{projectId})),
+                    (SELECT u.department_id FROM users u WHERE u.id = (SELECT p.directReportPersonUserId FROM project_interior p WHERE p.id = #{projectId})),
+                    (SELECT p.departmentId FROM project_interior p WHERE p.id = #{projectId})
+                )
+            <!-- AND d.id  IN (SELECT u.department_id FROM users u,role r WHERE u.role_id = r.id AND r.`level` = 1 AND r.id = 12) -->
+        </if>
+
+    </select>
+
+
+    <select id="queryDepartmentByCompany" resultMap="BaseDepartment">
+        SELECT id,departmentName FROM department WHERE companyId = #{companyId} AND isValid = 1
+    </select>
+
+    <select id="queryDepartmentOfExcelProjectInterior" resultMap="DepartmentIncludeProjectInterior">
+        SELECT
+            d.id,d.departmentName,#{year} AS `year`,
+        (
+            (SELECT COUNT(0) AS ss FROM project_group pg,project_group_user pgu
+            WHERE pg.id = pgu.projectGroupId AND pg.departmentId = d.id GROUP BY pg.id ORDER BY ss DESC  LIMIT 0,1)
+        ) AS perpons
+        FROM
+            department d
+        WHERE
+            d.isValid = 1
+            <!-- IN
+            (SELECT u.department_id
+                FROM users u,role r
+                WHERE u.role_id = r.id AND r.`level` = 1 AND r.id = 12 AND u.department_id = d.id) -->
+            <if test="companyId != null">
+                AND d.companyId = #{companyId}
+            </if>
+    </select>
+
+    <select id="statisesProjectAdwards" resultType="com.magic.ereal.business.entity.ProjectAdwards">
+        SELECT
+            d.departmentName,us.rwcl,d.id AS departmentId,
+            (SELECT IFNULL(targetNum,0) FROM second_target WHERE departmentId = d.id AND startTime =#{startTime} AND endTime = #{endTime}) AS targetNum,
+            (
+            SELECT COUNT(*) FROM project p WHERE p.`status` IN (5006,5007,5008) AND p.departmentId = d.id AND p.overTime BETWEEN '2017-06-01 00:00:00' AND '2017-06-30 23:59:59'
+            ) AS finishNum
+        FROM
+            users_statistics us,department d
+        WHERE
+            us.departmentId = d.id
+        AND us.startTime = #{startTime}
+        AND us.endTime = #{endTime}
+        AND us.rwcl >= 100
+        <if test="companyId != null">
+            AND d.companyId = #{companyId}
+        </if>
+        GROUP BY
+            us.departmentId
+
+    </select>
+
+    <select id="queryDepartmentByUser" resultMap="BaseDepartment">
+        SELECT
+            d.id,
+            d.departmentName,
+            d.companyId,
+            d.type
+        FROM
+            department d
+        WHERE
+            d.isValid = 1
+            <if test="companyId != null">
+              AND d.companyId=#{companyId}
+            </if>
+
+       <!-- AND  d.isProjectDepartment = 1 -->
+        <!--  IF((SELECT COUNT(*) FROM users WHERE department_id = d.id AND role_id=12)=0,FALSE,TRUE) -->
+    </select>
+
+    <select id="queryDepartment" resultMap="BaseDepartment">
+        SELECT d.* FROM department d
+        WHERE
+        d.isValid = 1
+        <if test="userId != null">
+          and d.companyId = (SELECT dt.companyId FROM department dt,users u WHERE dt.id=u.department_id and u.id=#{userId})
+        </if>
+    </select>
+
+    <select id="getContactsByUser" resultMap="DepartmentIncludeUser">
+        SELECT
+            d.*
+        FROM
+            company c,
+            department d
+        WHERE
+            d.isValid = 1
+            <if test="type == 0">
+              <!-- 如果是平台用户 查询平台部门 和 一真分公司下所有部门 -->
+                AND ((d.companyId = c.id AND d.id=(SELECT department_id FROM users WHERE id=#{userId})) OR d.companyId IS NULL)
+            </if>
+            <if test="type == 1">
+                AND (d.companyId= (SELECT companyId FROM department WHERE id = (SELECT department_id FROM users WHERE id=#{userId} AND type=1) ) OR d.type=0 )
+            </if>
+        GROUP BY d.id
+    </select>
+
+    <select id="queryDepartmentByCompanyId" resultMap="DepartmentIncludeUser">
+        SELECT `id`,`departmentName`,`companyId`,`createTime`,`type`,#{accreditType} AS accreditType,#{userId} AS userId
+        FROM `department`
+        WHERE `companyId`=#{companyId}
+        AND isValid = 1
+    </select>
+
+    <select id="queryDepartmentById" resultMap="DepartmentIncludeUser">
+        SELECT `id`,`departmentName`,`companyId`,`createTime`,`type`,#{accreditType} AS accreditType,#{userId} AS userId
+        FROM `department`
+        WHERE `id`=#{id}
+    </select>
+
+  <select id="info" resultMap="BaseDepartment">
+        SELECT d.*,c.companyName
+        FROM `department` d LEFT JOIN company c ON d.companyId = c.id
+        WHERE d.`id`=#{id}
+    </select>
+
+    <insert id="addDepartment">
+        INSERT INTO `department` (`departmentName`,`companyId`,`createTime`,`type`,`isValid`,isProjectDepartment)
+        VALUES (#{department.departmentName},#{department.companyId},NOW(),#{department.type},1,#{department.isProjectDepartment})
+    </insert>
+
+    <update id="updateDepartment">
+        UPDATE `department`
+        <set>
+            <if test="department.isProjectDepartment != null">
+                `isProjectDepartment`=#{department.isProjectDepartment},
+            </if>
+            <if test="department.departmentName != null">
+                `departmentName`=#{department.departmentName},
+            </if>
+            <if test="department.isValid != null">
+                `isValid`=#{department.isValid},
+            </if>
+            <if test="department.companyId != null">
+                `companyId`=#{department.companyId},
+            </if>
+        </set>
+        WHERE `id`=#{department.id}
+    </update>
+
+    <update id="batchUpdateDepartment">
+        <foreach collection="departments" index="index" item="department" separator=";">
+            UPDATE `department`
+            <set>
+                <if test="department.isProjectDepartment != null">
+                    `isProjectDepartment`=#{department.isProjectDepartment},
+                </if>
+                <if test="department.departmentName != null">
+                    `departmentName`=#{department.departmentName},
+                </if>
+                <if test="department.isValid != null">
+                    `isValid`=#{department.isValid},
+                </if>
+                <if test="department.companyId != null">
+                    `companyId`=#{department.companyId},
+                </if>
+            </set>
+            WHERE `id`=#{department.id}
+        </foreach>
+    </update>
+
+    <update id="updateDepartmentByCompany" >
+        UPDATE department SET  isValid = #{isValid} WHERE  companyId = #{companyId}
+    </update>
+
+    <delete id="delDepartment">
+        DELETE FROM `department` WHERE `id`=#{id}
+    </delete>
+
+    <!--获取公司下所有部门-->
+    <select id="getAllDepartmentByCompanyIdForWeb" resultMap="BaseDepartment">
+        SELECT d.*,c.companyName FROM `department` d LEFT JOIN company c ON d.companyId = c.id
+        WHERE
+         d.isValid = 1
+        <if test="type != null">
+            AND d.type = #{type}
+            <if test="companyId != null">
+               AND d.`companyId`=#{companyId}
+            </if>
+        </if>
+        <if test="type == null">
+            <if test="companyId != null">
+                AND d.`companyId`=#{companyId}
+            </if>
+        </if>
+        <if test="companyId != null">
+            AND d.`companyId`=#{companyId}
+        </if>
+        <if test="isProjectDepartmentId != null">
+            AND d.isProjectDepartment = #{isProjectDepartmentId}
+        </if>
+        ORDER BY d.type ASC ,d.companyId ASC ,d.id ASC
+    </select>
+
+
+    <select id="getAllForWeb" resultMap="BaseDepartment">
+        select d.id,d.type,
+         CASE d.type WHEN 0 THEN CONCAT(d.departmentName,'(总公司部门)')
+         ELSE CONCAT(d.departmentName,'(',c.companyName,')') END AS departmentName
+          from department d LEFT JOIN company c ON d.companyId = c.id
+          WHERE d.isValid = 1
+    </select>
+
+    <!--获取公司下所有部门（下拉列表使用）（存在A导师的部门）-->
+    <select id="getAllForWebGroup" resultMap="BaseDepartment">
+        select d.id,d.type,d.companyId,
+         CASE d.type WHEN 0 THEN CONCAT(d.departmentName,'(总公司部门)')
+         ELSE CONCAT(d.departmentName,'(',c.companyName,')') END AS departmentName
+          from department d , company c ,users u
+          WHERE d.companyId = c.id
+          AND u.department_id = d.id
+          AND u.role_id = 12
+          AND d.isValid = 1
+    </select>
+</mapper>

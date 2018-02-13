@@ -1,0 +1,501 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.magic.ereal.business.mapper.IProjectInteriorMapper" >
+
+    <resultMap id="BaseResultMap" type="com.magic.ereal.business.entity.ProjectInterior" >
+        <id column="id" property="id" javaType="java.lang.Integer" />
+        <result column="projectNumber" property="projectNumber" javaType="java.lang.String" />
+        <result column="projectName" property="projectName" javaType="java.lang.String" />
+        <result column="shortName" property="shortName" javaType="java.lang.String" />
+        <result column="projectManagerName" property="projectManagerName" javaType="java.lang.String" />
+        <result column="departmentName" property="departmentName" javaType="java.lang.String" />
+        <result column="projectMajorId" property="projectMajorId" javaType="java.lang.Integer" />
+        <result column="initWorkload" property="initWorkload" javaType="java.lang.Double" />
+        <result column="projectGroupId" property="projectGroupId" javaType="java.lang.Integer" />
+        <result column="departmentId" property="departmentId" javaType="java.lang.Integer" />
+        <result column="startTime" property="startTime" javaType="java.util.Date" />
+        <result column="endTime" property="endTime" javaType="java.util.Date" />
+        <result column="reviewerUserId" property="reviewerUserId" javaType="java.lang.Integer" />
+        <result column="allocationUserId" property="allocationUserId" javaType="java.lang.Integer" />
+        <result column="reviewerTime" property="reviewerTime" javaType="java.util.Date" />
+        <result column="allocationTime" property="allocationTime" javaType="java.util.Date" />
+        <result column="createUserId" property="createUserId" javaType="java.lang.Integer" />
+        <result column="isTerminate" property="isTerminate" javaType="java.lang.Integer" />
+        <result column="directReportPersonUserId" property="directReportPersonUserId" javaType="java.lang.Integer" />
+        <result column="atHome" property="atHome" javaType="java.lang.Integer" />
+        <result column="projectStatus" property="projectStatus" javaType="java.lang.Integer" />
+        <result column="status" property="status" javaType="java.lang.Integer" />
+        <result column="createTime" property="createTime" javaType="java.util.Date"/>
+        <result column="updateTime" property="updateTime" javaType="java.util.Date"/>
+        <result column="useTime" property="useTime" javaType="java.lang.Double"/>
+        <result column="cTeacherName" property="cTeacherName" javaType="java.lang.String"/>
+        <result column="isValid" property="isValid" javaType="java.lang.Integer"/>
+    </resultMap>
+
+    <resultMap id="BaseDRACMap" type="com.magic.ereal.business.entity.ProjectInterior" extends="BaseResultMap">
+        <association property="department" column="departmentId" select="com.magic.ereal.business.mapper.IDepartmentMapper.info"/>
+        <association property="reviewerUser" column="reviewerUserId" select="com.magic.ereal.business.mapper.IUserMapper.getUserById"/>
+        <association property="allocationUser" column="allocationUserId" select="com.magic.ereal.business.mapper.IUserMapper.getUserById"/>
+        <association property="createUser" column="createUserId" select="com.magic.ereal.business.mapper.IUserMapper.getUserById"/>
+    </resultMap>
+
+    <!-- 包含 周验收数据集合 -->
+    <resultMap id="ProjectInteriorIncludeWeekData" type="com.magic.ereal.business.entity.ProjectInterior" extends="BaseDRACMap">
+        <association property="acceptances" column="id" select="com.magic.ereal.business.mapper.IProjectInteriorWeekAcceptanceMapper.queryProjectInteriorWeekAcceptanceByProject"/>
+    </resultMap>
+
+    <!-- 包含 周验收数据集合 -->
+    <resultMap id="ProjectInteriorIncludeWeekDataDESC" type="com.magic.ereal.business.entity.ProjectInterior" extends="BaseDRACMap">
+        <association property="acceptances" column="id" select="com.magic.ereal.business.mapper.IProjectInteriorWeekAcceptanceMapper.queryProjectInteriorWeekAcceptanceByProjectDESC"/>
+    </resultMap>
+
+    <resultMap id="ProjectInteriorIncludeUserK" type="com.magic.ereal.business.entity.ProjectInterior" extends="ProjectInteriorIncludeWeekData">
+        <association property="userKs" column="id" select="com.magic.ereal.business.mapper.IProjectInteriorWeekAcceptanceMapper.queryUserKByProjectInterior"/>
+    </resultMap>
+
+
+    <resultMap id="ProjectInteriorIncludeUserKDESC" type="com.magic.ereal.business.entity.ProjectInterior" extends="ProjectInteriorIncludeWeekDataDESC">
+        <association property="userKs" column="id" select="com.magic.ereal.business.mapper.IProjectInteriorWeekAcceptanceMapper.queryUserKByProjectInterior"/>
+    </resultMap>
+
+
+    <resultMap id="BaseExcelProjectInterior" type="com.magic.ereal.business.entity.ExcelProjectInterior">
+        <result column="projectNumber" property="projectNumber" javaType="java.lang.String"/>
+        <result column="projectName" property="projectName" javaType="java.lang.String"/>
+        <result column="projectManagerName" property="projectManagerName" javaType="java.lang.String"/>
+        <result column="directReportName" property="directReportName" javaType="java.lang.String"/>
+        <result column="startTime" property="startTime" javaType="java.util.Date"/>
+        <result column="initWorkload" property="initWorkload" javaType="java.lang.Integer"/>
+        <result column="projectId" property="projectId" javaType="java.lang.Integer"/>
+        <association property="newReport" column="projectId" select="com.magic.ereal.business.mapper.IProjectInteriorWeekAcceptanceMapper.queryExcelProjectInteriorNewReport"/>
+        <association property="weekAcceptances" column="projectId" select="com.magic.ereal.business.mapper.IProjectInteriorWeekAcceptanceMapper.queryProjectInteriorWeekAcceptanceByProject"/>
+    </resultMap>
+
+    <select id="excelProjectInterior" resultMap="BaseExcelProjectInterior" parameterType="map">
+        SELECT
+            p.id AS projectId,
+            p.projectNumber,
+            p.startTime,
+            p.projectName,
+            p.initWorkload,
+            (SELECT u.`name` FROM users u,project_group pg WHERE pg.projectManagerId = u.id AND p.projectGroupId = pg.id ) AS projectManagerName,
+            (SELECT u.`name` FROM users u WHERE p.directReportPersonUserId = u.id ) AS directReportName,
+            (SELECT pweek.progress FROM project_interior_week_acceptance pweek WHERE pweek.projectInteriorId = p.id AND pweek.`status` NOT IN (0) ORDER BY pweek.id DESC LIMIT 0,1) AS progress
+        FROM
+            project_interior p
+        WHERE  1=1 AND p.isValid = 1
+        AND p.`status` = 1
+        AND (SELECT pweek.progress FROM project_interior_week_acceptance pweek WHERE pweek.projectInteriorId = p.id AND pweek.`status` NOT IN (0) ORDER BY pweek.id DESC LIMIT 0,1) > 0
+        <if test="departmentId != null">
+            AND p.departmentId = #{departmentId}
+        </if>
+        <if test="year != null">
+            AND DATE_FORMAT(p.createTime,'%Y') = DATE_FORMAT(#{year},'%Y')
+            AND p.`status` = 1
+        </if>
+    </select>
+
+
+
+
+    <delete id="delProjectInterior">
+        DELETE FROM project_interior WHERE id = #{projectId}
+    </delete>
+
+    <select id="queryBaseInfo" resultMap="BaseResultMap">
+        SELECT * FROM project_interior WHERE  id=#{id}
+    </select>
+
+    <select id="queryProjectInteriorById" resultMap="ProjectInteriorIncludeUserKDESC">
+        SELECT
+          pi.*,
+          (SELECT u.`name` FROM users u, project_group pg WHERE u.id = pg.projectManagerId AND pg.id = pi.projectGroupId )
+          AS projectManagerName,
+          (SELECT u.`name` FROM users u WHERE u.id = pi.directReportPersonUserId )
+          AS cTeacherName,
+          (SELECT `departmentName` FROM `department` WHERE  `id`=pi.departmentId)
+            AS departmentName,
+        (SELECT SUM(( UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / (3600)) FROM work_diary_sub wds,work_diary wd
+        WHERE  wds.transactionSubId = 3 and wd.id=wds.workDiaryId and wds.jobTypeId=pi.id and wd.`status`=4004
+        )
+        AS useTime
+         FROM `project_interior` pi
+         WHERE pi.`id`=#{id}
+    </select>
+
+    <select id="queryProjectInteriorByItem" parameterType="map" resultMap="ProjectInteriorIncludeWeekData">
+        SELECT
+            pi.id,
+            pi.projectName,
+            pi.projectNumber,
+            pi.shortName,
+            pi.`status`,
+            pi.projectStatus,
+            pi.departmentId,
+            pi.isTerminate,
+            (SELECT u.`name` FROM users u, project_group pg WHERE u.id = pg.projectManagerId AND pg.id = pi.projectGroupId )
+            AS projectManagerName,
+
+            (SELECT SUM(( UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / (3600)) FROM work_diary_sub wds,work_diary wd
+            WHERE  wds.transactionSubId = 3 and wd.id=wds.workDiaryId and wds.jobTypeId=pi.id and wd.`status`=4004
+            )
+            AS useTime,
+        (SELECT `departmentName` FROM `department` WHERE  `id`=pi.departmentId)
+            AS departmentName,
+        (SELECT SUM(IF(pweek.isAdd = 1,pweek.sumK,-pweek.sumK)) FROM project_interior_week_acceptance pweek
+          WHERE pweek.projectInteriorId = pi.id) AS totalK,
+        (SELECT pwk.progress FROM project_interior_week_acceptance pwk
+          WHERE pwk.projectInteriorId = pi.id ORDER BY pwk.id DESC LIMIT 0,1) AS progress
+        <if test="sortType == 5">
+            ,((SELECT SUM(IF(pweek.isAdd = 1,pweek.sumK,-pweek.sumK)) FROM project_interior_week_acceptance pweek
+            WHERE pweek.projectInteriorId = pi.id) * 135 / (SELECT SUM(( UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / (3600)) FROM work_diary_sub wds,work_diary wd
+            WHERE  wds.transactionSubId = 3 and wd.id=wds.workDiaryId and wds.jobTypeId=pi.id and wd.`status`=4004
+            ) ) AS efficiencySort
+        </if>
+        <if test="sortType == 3 or sortType == 4">
+            , (SELECT SUM(IFNULL(pka.k,0)) FROM project_interior_week_acceptance pweek,project_interior_week_k_allocation pka
+            WHERE pweek.id = pka.weekId AND pka.createTime BETWEEN #{startTime} AND #{endTime}) AS newAddK
+        </if>
+
+
+        FROM
+            project_interior pi
+        WHERE
+            pi.`status` = 1 AND pi.isValid = 1
+        <if test="projectMajorId != null">
+            AND pi.projectMajorId = #{projectMajorId}
+        </if>
+        <if test="departmentId != null">
+            AND pi.departmentId = #{departmentId}
+        </if>
+        <if test="isTerminate != null">
+            AND pi.isTerminate = #{isTerminate}
+        </if>
+        <if test="userId != null and roleId != 5">
+            AND (pi.allocationUserId = #{userId} OR pi.directReportPersonUserId = #{userId}
+            OR pi.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=#{userId}))
+            <!-- 授权用户 外部项目查询条件 -->
+            OR (
+
+             (pi.allocationUserId = (SELECT sp_accredit_userId(#{userId},1)) OR pi.directReportPersonUserId = (SELECT sp_accredit_userId(#{userId},1)))
+             OR
+              pi.directReportPersonUserId = (SELECT sp_accredit_userId(#{userId},1))
+              OR
+              pi.reviewerUserId = (SELECT sp_accredit_userId(#{userId},1))
+            )
+        </if>
+        <if test="sortType == 0">
+            ORDER BY pi.id DESC
+        </if>
+        <if test="sortType == 1">
+            ORDER BY totalK DESC
+        </if>
+        <if test="sortType == 2">
+            ORDER BY progress DESC
+        </if>
+        <if test="sortType == 3 or sortType == 4">
+            ORDER BY newAddK DESC
+        </if>
+        <if test="sortType == 5">
+            ORDER BY efficiencySort DESC
+        </if>
+        <if test="limit != null and limitSize != null">
+            LIMIT #{limit},#{limitSize}
+        </if>
+    </select>
+
+    <select id="list" parameterType="map" resultMap="ProjectInteriorIncludeWeekData">
+        select pi.*,pg.projectName AS projectGroupName ,pm.majorName AS projectMajorName,
+        projectManagerUser.name AS projectManagerName
+        from
+        project_interior pi
+        LEFT JOIN users createUser ON pi.createUserId = createUser.id
+        LEFT JOIN users reviewerUser ON pi.reviewerUserId = reviewerUser.id
+        LEFT JOIN users allocationUser ON pi.allocationUserId = allocationUser.id
+        LEFT JOIN users directReportPersonUser ON pi.directReportPersonUserId = directReportPersonUser.id
+        LEFT JOIN project_major pm ON pi.projectMajorId = pm.id
+        LEFT JOIN project_group pg ON pi.projectGroupId = pg.id
+        LEFT JOIN users projectManagerUser ON pg.projectManagerId = projectManagerUser.id
+        LEFT JOIN department d ON pi.departmentId = d.id
+        WHERE
+        1=1 AND pi.isValid = 1
+        <if test="userId != null and roleId != 2 and roleId != 3 and roleId != 4 and roleId != 5  and roleId != 6 and roleId != 13 and roleId != 1">
+            AND (pi.allocationUserId = #{userId} OR pi.directReportPersonUserId = #{userId}
+            OR pi.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=#{userId}))
+        </if>
+        <!--<if test="userId != null and roleId != null and roleId != 1">-->
+        <!--&lt;!&ndash;    <if test="roleId == 5">-->
+                <!--如果是值总-->
+                 <!--AND pi.reviewerUserId = #{userId}-->
+            <!--</if> &ndash;&gt;-->
+            <!--<if test="roleId == 7">-->
+                <!--&lt;!&ndash;如果是C导师&ndash;&gt;-->
+                <!--AND pi.directReportPersonUserId = #{userId}-->
+            <!--</if>-->
+            <!--<if test="roleId == 12">-->
+                <!--&lt;!&ndash;如果是团队长&ndash;&gt;-->
+                <!--AND (pi.allocationUserId = #{userId} OR pi.directReportPersonUserId = #{userId})-->
+            <!--</if>-->
+            <!--<if test="roleId != 12 and roleId != 11 and roleId != 7 and roleId != 5 and roleId != 1 and roleId != 13">-->
+                <!--AND pi.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=#{userId})-->
+            <!--</if>-->
+
+            <!--<if test="status != null">-->
+                <!--&lt;!&ndash;如果是C导师&ndash;&gt;-->
+                <!--AND pi.status = #{status}-->
+            <!--</if>-->
+        <!--</if>-->
+        <if test="roleId == 14">
+            AND (pi.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=#{userId})
+                OR pi.allocationUserId = #{userId} OR pi.directReportPersonUserId = #{userId})
+        </if>
+        <if test="p.departmentId != null">
+            AND pi.departmentId = #{p.departmentId}
+        </if>
+        <if test="p.projectStatus != null">
+            AND pi.projectStatus = #{p.projectStatus}
+        </if>
+        <if test="p.projectMajorId != null">
+            AND pi.projectMajorId = #{p.projectMajorId}
+        </if>
+        <if test="p.projectGroupId != null">
+            AND pi.projectGroupId = #{p.projectGroupId}
+        </if>
+        <if test="p.isTerminate != null">
+            AND pi.isTerminate = #{p.isTerminate}
+        </if>
+        <if test="p.status != null">
+            AND pi.status = #{p.status}
+        </if>
+        <if test="p.projectNumber != null and p.projectNumber != ''">
+            AND pi.projectNumber LIKE '%${p.projectNumber}%'
+        </if>
+        <if test="p.projectName != null and p.projectName != ''">
+            AND pi.projectName LIKE '%${p.projectName}%'
+        </if>
+        <if test="p.shortName != null and p.shortName != ''">
+            AND pi.shortName LIKE '%${p.shortName}%'
+        </if>
+        <if test="isManagerId != null">
+            AND pg.projectManagerId = #{isManagerId}
+        </if>
+        ORDER BY
+        <if test="pageArgs != null">
+            <if test="pageArgs.column != null and pageArgs.column != ''">
+                ${pageArgs.column} ${pageArgs.order},
+            </if>
+        </if>
+        pi.createTime DESC
+        <if test="pageArgs != null">
+            limit #{pageArgs.pageStart}, #{pageArgs.pageSize}
+        </if>
+    </select>
+
+    <select id="countList" parameterType="map" resultType="int">
+        select
+        COUNT(0)
+        from
+        project_interior pi
+        LEFT JOIN project_major pm ON pi.projectMajorId = pm.id
+        LEFT JOIN project_group pg ON pi.projectGroupId = pg.id
+        LEFT JOIN users projectManagerUser ON pg.projectManagerId = projectManagerUser.id
+        WHERE
+        1=1 AND pi.isValid = 1
+        <if test="userId != null and roleId != 2 and roleId != 3 and roleId != 4 and roleId != 5  and roleId != 6 and roleId != 13 and roleId != 1">
+            AND (pi.allocationUserId = #{userId} OR pi.directReportPersonUserId = #{userId}
+            OR pi.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=#{userId}))
+        </if>
+        <if test="roleId == 14">
+            AND (pi.projectGroupId IN (SELECT projectGroupId FROM project_group_user WHERE userId=#{userId})
+                OR pi.allocationUserId = #{userId} OR pi.directReportPersonUserId = #{userId})
+        </if>
+        <if test="p.departmentId != null">
+            AND pi.departmentId = #{p.departmentId}
+        </if>
+        <if test="p.projectStatus != null">
+            AND pi.projectStatus = #{p.projectStatus}
+        </if>
+        <if test="p.projectMajorId != null">
+            AND pi.projectMajorId = #{p.projectMajorId}
+        </if>
+        <if test="p.projectGroupId != null">
+            AND pi.projectGroupId = #{p.projectGroupId}
+        </if>
+        <if test="p.isTerminate != null">
+            AND pi.isTerminate = #{p.isTerminate}
+        </if>
+        <if test="p.status != null">
+            AND pi.status = #{p.status}
+        </if>
+        <if test="p.projectNumber != null and p.projectNumber != ''">
+            AND pi.projectNumber LIKE '%${p.projectNumber}%'
+        </if>
+        <if test="p.projectName != null and p.projectName != ''">
+            AND pi.projectName LIKE '%${p.projectName}%'
+        </if>
+        <if test="p.shortName != null and p.shortName != ''">
+            AND pi.shortName LIKE '%${p.shortName}%'
+        </if>
+        <if test="isManagerId != null">
+            AND pg.projectManagerId = #{isManagerId}
+        </if>
+    </select>
+
+    <select id="info" resultMap="ProjectInteriorIncludeUserK">
+      select pi.*,pg.projectName AS projectGroupName ,
+        pm.majorName AS projectMajorName,
+        projectManagerUser.name AS projectManagerName,
+        directReportPersonUser.name AS directReportPersonUserName,
+        d.companyId AS companyId,
+        (
+          (SELECT SUM(pk.k) FROM project_interior_week_acceptance pw,project_interior_week_k_allocation pk WHERE pw.projectInteriorId = pi.id AND pw.id = pk.weekId)
+            / (SELECT SUM((UNIX_TIMESTAMP(wds.endTime) - UNIX_TIMESTAMP(wds.startTime)) / 3600) FROM work_diary_sub wds,work_diary wd
+		  WHERE wds.transactionSubId = 3 AND wds.jobTypeId = pi.id AND wd.id = wds.workDiaryId AND wd.`status` = 4004) * IFNULL((SELECT kHour FROM allconfig),135)
+        ) AS efficiency
+      from
+        project_interior pi
+        LEFT JOIN users createUser ON pi.createUserId = createUser.id
+        LEFT JOIN users reviewerUser ON pi.reviewerUserId = reviewerUser.id
+        LEFT JOIN users allocationUser ON pi.allocationUserId = allocationUser.id
+        LEFT JOIN users directReportPersonUser ON pi.directReportPersonUserId = directReportPersonUser.id
+        LEFT JOIN project_major pm ON pi.projectMajorId = pm.id
+        LEFT JOIN project_group pg ON pi.projectGroupId = pg.id
+        LEFT JOIN users projectManagerUser ON pg.projectManagerId = projectManagerUser.id
+        LEFT JOIN department d ON pi.departmentId = d.id
+        WHERE
+        pi.id = #{id}
+    </select>
+
+    <insert id="save" parameterType="com.magic.ereal.business.entity.ProjectInterior" >
+        insert into project_interior (projectNumber, projectName, shortName, projectMajorId,
+        initWorkload, projectGroupId, departmentId, startTime, endTime, reviewerUserId, allocationUserId,
+        reviewerTime, allocationTime, createUserId, atHome, createTime, updateTime,remark,directReportPersonUserId,status,isValid)
+        values (#{projectNumber},#{projectName},#{shortName},#{projectMajorId},#{initWorkload},#{projectGroupId},
+        #{departmentId},#{startTime},#{endTime},#{reviewerUserId},#{allocationUserId},#{reviewerTime},#{allocationTime},
+        #{createUserId},#{atHome},now(),now(),#{remark},#{directReportPersonUserId},0,1)
+    </insert>
+
+
+    <insert id="batchAddProjectInterior">
+        insert into project_interior (projectNumber, projectName, shortName, projectMajorId,
+        initWorkload, projectGroupId, departmentId, startTime, endTime, reviewerUserId, allocationUserId,
+        reviewerTime, allocationTime, createUserId, atHome, createTime, updateTime,remark,directReportPersonUserId,status,isValid)
+        values
+        <foreach collection="projectInteriors" index="index" item="projectInterior" separator=",">
+            (#{projectInterior.projectNumber},#{projectInterior.projectName},#{projectInterior.shortName},#{projectInterior.projectMajorId},#{projectInterior.initWorkload},#{projectInterior.projectGroupId},
+            #{projectInterior.departmentId},#{projectInterior.startTime},#{projectInterior.endTime},#{projectInterior.reviewerUserId},#{projectInterior.allocationUserId},#{projectInterior.reviewerTime},#{projectInterior.allocationTime},
+            #{projectInterior.createUserId},#{projectInterior.atHome},now(),now(),#{projectInterior.remark},#{projectInterior.directReportPersonUserId},0,1)
+        </foreach>
+    </insert>
+
+    <update id="update" parameterType="com.magic.ereal.business.entity.ProjectInterior">
+        update project_interior
+        <set >
+            <if test="isValid != null" >
+                isValid = #{isValid},
+            </if>
+            <if test="isTerminate != null" >
+                isTerminate = #{isTerminate},
+            </if>
+            <if test="overTime != null" >
+                overTime = #{overTime},
+            </if>
+            <if test="projectStatus != null" >
+                projectStatus = #{projectStatus},
+            </if>
+            <if test="projectNumber != null and projectNumber != ''" >
+                projectNumber = #{projectNumber},
+            </if>
+            <if test="projectName != null and projectName != ''" >
+                projectName = #{projectName},
+            </if>
+            <if test="shortName != null and shortName !=  ''" >
+                shortName = #{shortName},
+            </if>
+            <if test="projectMajorId != null" >
+                projectMajorId = #{projectMajorId},
+            </if>
+            <if test="initWorkload != null" >
+                initWorkload = #{initWorkload},
+            </if>
+            <if test="projectGroupId != null" >
+                projectGroupId = #{projectGroupId},
+            </if>
+            <if test="departmentId != null" >
+                departmentId = #{departmentId},
+            </if>
+            <if test="startTime != null" >
+                startTime = #{startTime},
+            </if>
+            <if test="endTime != null" >
+                endTime = #{endTime},
+            </if>
+            <if test="reviewerUserId != null" >
+                reviewerUserId = #{reviewerUserId},
+            </if>
+            <if test="allocationUserId != null" >
+                allocationUserId = #{allocationUserId},
+            </if>
+            <if test="reviewerTime != null" >
+                reviewerTime = #{reviewerTime},
+            </if>
+            <if test="allocationTime != null" >
+                allocationTime = #{allocationTime},
+            </if>
+            <if test="createUserId != null" >
+                createUserId = #{createUserId},
+            </if>
+            <if test="status != null" >
+                status = #{status},
+            </if>
+            <if test="atHome != null" >
+                atHome = #{atHome},
+            </if>
+            <if test="remark != null and remark != ''" >
+                remark = #{remark},
+            </if>
+            <if test="directReportPersonUserId != null" >
+                directReportPersonUserId = #{directReportPersonUserId},
+            </if>
+            updateTime = now()
+        </set>
+        where id = #{id}
+    </update>
+
+    <update id="updateAll" parameterType="com.magic.ereal.business.entity.ProjectInterior">
+        update project_interior
+        set projectNumber = #{projectNumber},
+          projectName = #{projectName},
+          isValid = #{isValid},
+          shortName = #{shortName},
+          projectMajorId = #{projectMajorId},
+          initWorkload = #{initWorkload},
+          projectGroupId = #{projectGroupId},
+          departmentId = #{departmentId},
+          startTime = #{startTime},
+          endTime = #{endTime},
+          reviewerUserId = #{reviewerUserId},
+          allocationUserId = #{allocationUserId},
+          reviewerTime = #{reviewerTime},
+          allocationTime = #{allocationTime},
+          createUserId = #{createUserId},
+          atHome = #{atHome},
+          status = #{status},
+          directReportPersonUserId = #{directReportPersonUserId},
+          remark = #{remark},
+          updateTime = now()
+        where id = #{id}
+    </update>
+
+    <!--传递卡 内部项目筛选-->
+    <select id="getWorkDiaryProInterior" resultMap="BaseResultMap" >
+        select * from project_interior p , project_group_user pg
+        WHERE
+        p.`status` = 1 AND p.isValid = 1
+        AND p.isTerminate = 0
+        AND p.projectGroupId = pg.projectGroupId AND p.projectStatus =0 AND
+        (pg.userId = #{userId}
+        OR p.directReportPersonUserId = #{userId} OR p.createUserId = #{userId} OR  p.allocationUserId = #{userId})
+        GROUP BY p.id
+    </select>
+</mapper>
