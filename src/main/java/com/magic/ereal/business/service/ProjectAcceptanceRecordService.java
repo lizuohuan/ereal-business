@@ -76,16 +76,37 @@ public class ProjectAcceptanceRecordService {
         //type 验收类型 0：破题  1：内部  2：外部
         //外部
         List<ProjectAcceptanceRecord> wList = projectAcceptanceRecordMapper.list(projectId, 2);
-        if (null != wList && wList.size() > 0) {
-            list.add(encapsulationAcceptance(wList,"外部项目结项"));
-        }
-        //内部
-        List<ProjectAcceptanceRecord> nList = projectAcceptanceRecordMapper.list(projectId, 1);
-        if (null != nList && nList.size() > 0) {
-            list.add(encapsulationAcceptance(nList,"内部项目结项"));
-        }
         //周验收
         List<ProjectWeekAcceptance> pwList = projectWeekAcceptanceMapper.queryProjectWeekAcceptanceByProject(projectId);
+        //内部
+        List<ProjectAcceptanceRecord> nList = projectAcceptanceRecordMapper.list(projectId, 1);
+
+        if (null != wList && wList.size() > 0) {
+            list.add(encapsulationAcceptance(wList,"外部项目结项"));
+            if(null == pwList || pwList.size() == 0){
+                Acceptance ac = new Acceptance();
+                ac.setAcceptanceName("周验收");
+                ac.setType(3);
+                ac.setStatus(2);
+                list.add(ac);
+            }
+            if(null == nList || nList.size() == 0){
+                Acceptance ac = new Acceptance();
+                list.add(ac);
+            }
+        }
+
+        if (null != nList && nList.size() > 0) {
+            list.add(encapsulationAcceptance(nList,"内部项目结项"));
+            if(null == pwList || pwList.size() == 0){
+                Acceptance ac = new Acceptance();
+                ac.setAcceptanceName("周验收");
+                ac.setType(3);
+                ac.setStatus(2);
+                list.add(ac);
+            }
+        }
+
         if (null != pwList && pwList.size() > 0) {
             Acceptance ac = new Acceptance();
             ac.setAcceptanceName("周验收");
@@ -144,16 +165,9 @@ public class ProjectAcceptanceRecordService {
 
                 }
             }
+            list.add(ac);
+        }
 
-            list.add(ac);
-        }
-        else{
-            Acceptance ac = new Acceptance();
-            ac.setAcceptanceName("周验收");
-            ac.setType(3);
-            ac.setStatus(2);
-            list.add(ac);
-        }
         return list;
     }
 
